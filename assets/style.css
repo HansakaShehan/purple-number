@@ -1,0 +1,32 @@
+:root{
+  --bg:#1b0b23;
+  --card:#2b0f3f;
+  --accent:#7b2cff;
+  --accent-2:#9b6bff;
+  --text:#efe9ff;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,var(--bg),#110417);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.app{width:100%;max-width:720px}
+.hero{text-align:center;margin-bottom:18px}
+.title{font-size:2rem;margin:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));-webkit-background-clip:text;color:transparent}
+.subtitle{margin:6px 0 0;opacity:.9}
+.game-card{background:linear-gradient(180deg,rgba(255,255,255,0.03),rgba(0,0,0,0.05));border-radius:14px;padding:20px;box-shadow:0 6px 30px rgba(11,3,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+.controls{display:flex;align-items:center;gap:12px}
+.btn{background:transparent;border:1px solid rgba(255,255,255,0.08);padding:10px 14px;border-radius:10px;color:var(--text);cursor:pointer;transition:transform .12s ease,box-shadow .12s ease}
+.btn:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(123,44,255,0.12)}
+.btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;color:#fff}
+.play-area{display:flex;gap:10px;margin-top:14px}
+input[type=number]{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text);font-size:1rem}
+.timer{flex:1;height:12px;background:rgba(255,255,255,0.04);border-radius:8px;overflow:hidden}
+.timer-bar{height:100%;background:linear-gradient(90deg,var(--accent-2),var(--accent));width:0%;transition:width 0.2s linear}
+.result{margin-top:18px;padding:12px;border-radius:10px;background:linear-gradient(90deg,rgba(123,44,255,0.06),rgba(155,107,255,0.03));border:1px solid rgba(123,44,255,0.08)}
+.hidden{display:none}
+.reveal{font-weight:700;font-size:1.1rem}
+.outcome{margin-top:8px;font-size:1rem}
+.scoreboard{display:flex;gap:18px;margin-top:12px;opacity:.95}
+.footer{text-align:center;margin-top:14px;opacity:.6;font-size:.9rem}
+
+/* animations */
+@keyframes popIn{from{transform:translateY(8px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+.result{animation:popIn .22s ease both}
