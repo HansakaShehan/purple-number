@@ -16,6 +16,7 @@
         <section class="game-card">
             <div class="controls">
                 <button id="startBtn" class="btn primary">Start Round</button>
+                <button id="audioToggleBtn" class="btn secondary">Toggle Audio</button>
                 <div class="timer" id="timer">
                     <div class="timer-bar" id="timerBar"></div>
                 </div>
