@@ -23,9 +23,22 @@
             </div>
 
             <div class="play-area">
-                <input id="guessInput" type="number" min="1" max="10" placeholder="Enter 1-10" disabled>
+                <div class="number-grid">
+                    <button class="number-btn" data-number="1">1</button>
+                    <button class="number-btn" data-number="2">2</button>
+                    <button class="number-btn" data-number="3">3</button>
+                    <button class="number-btn" data-number="4">4</button>
+                    <button class="number-btn" data-number="5">5</button>
+                    <button class="number-btn" data-number="6">6</button>
+                    <button class="number-btn" data-number="7">7</button>
+                    <button class="number-btn" data-number="8">8</button>
+                    <button class="number-btn" data-number="9">9</button>
+                    <button class="number-btn" data-number="10">10</button>
+                </div>
+                <input id="guessInput" type="hidden">
                 <button id="submitBtn" class="btn" disabled>Send Guess</button>
             </div>
+            <div class="selected-display">Selected: <span id="selectedNumber">—</span></div>
 
             <div id="result" class="result hidden">
                 <div class="reveal">Real number: <span id="realNumber">-</span></div>

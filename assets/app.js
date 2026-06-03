@@ -187,6 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const submitBtn = document.getElementById('submitBtn');
   const audioToggleBtn = document.getElementById('audioToggleBtn');
   const guessInput = document.getElementById('guessInput');
+  const selectedNumberDisplay = document.getElementById('selectedNumber');
+  const numberButtons = document.querySelectorAll('.number-btn');
   const timerBar = document.getElementById('timerBar');
   const resultEl = document.getElementById('result');
   const realNumberEl = document.getElementById('realNumber');
@@ -199,18 +201,30 @@ document.addEventListener('DOMContentLoaded', () => {
   let correct = 0;
   let misses = 0;
   let lastTickSecond = null;
+  let selectedNumber = null;
 
   function resetUI() {
     timerBar.style.width = '0%';
     resultEl.classList.add('hidden');
     realNumberEl.textContent = '-';
     outcomeEl.textContent = '';
+    selectedNumber = null;
+    selectedNumberDisplay.textContent = '—';
+    numberButtons.forEach(btn => btn.classList.remove('active'));
+  }
+
+  function selectNumber(num) {
+    selectedNumber = num;
+    guessInput.value = num;
+    selectedNumberDisplay.textContent = num;
+    numberButtons.forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.number) === num);
+    });
   }
 
   function enablePlay(enable) {
-    guessInput.disabled = !enable;
+    numberButtons.forEach(btn => btn.disabled = !enable);
     submitBtn.disabled = !enable;
-    if (enable) guessInput.focus();
   }
 
   function updateMuteButton() {
@@ -267,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (elapsed >= duration) {
-      endRound(guessInput.value ? Number(guessInput.value) : null, true);
+      endRound(selectedNumber !== null ? selectedNumber : null, true);
     }
   }
 
@@ -277,7 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
     audioManager.playSound('start');
     roundActive = true;
     enablePlay(true);
-    guessInput.value = '';
     resultEl.classList.add('hidden');
 
     lastTickSecond = null;
@@ -296,10 +309,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   startBtn.addEventListener('click', startRound);
 
+  numberButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!roundActive) return;
+      selectNumber(parseInt(btn.dataset.number));
+      audioManager.playSound('click');
+    });
+  });
+
   submitBtn.addEventListener('click', () => {
     if (!roundActive) return;
     audioManager.playSound('click');
-    const value = guessInput.value ? Number(guessInput.value) : null;
+    const value = selectedNumber !== null ? selectedNumber : null;
     endRound(value);
   });
 
@@ -315,7 +336,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   guessInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' && roundActive) {
+    if (roundActive && event.key >= '1' && event.key <= '9') {
+      selectNumber(parseInt(event.key));
+      audioManager.playSound('click');
+    } else if (roundActive && event.key === '0') {
+      selectNumber(10);
+      audioManager.playSound('click');
+    } else if (event.key === 'Enter' && roundActive && selectedNumber !== null) {
       submitBtn.click();
     }
   });
