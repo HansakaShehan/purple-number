@@ -1,17 +1,23 @@
+// RequestManager - API communication
 class RequestManager {
-  async postJSON(url, data) {
+  async postJSON(url, data = {}) {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
+    
+    const json = await res.json();
+    
     if (!res.ok) {
-      throw new Error(`Network response not ok (${res.status})`);
+      throw json;
     }
-    return res.json();
+    
+    return json;
   }
 }
 
+// AudioManager - Web Audio API synthesis
 class AudioManager {
   constructor() {
     this.audioContext = null;
@@ -179,175 +185,8 @@ class AudioManager {
   }
 }
 
-const rm = new RequestManager();
-const audioManager = new AudioManager();
-
-document.addEventListener('DOMContentLoaded', () => {
-  const startBtn = document.getElementById('startBtn');
-  const submitBtn = document.getElementById('submitBtn');
-  const audioToggleBtn = document.getElementById('audioToggleBtn');
-  const guessInput = document.getElementById('guessInput');
-  const selectedNumberDisplay = document.getElementById('selectedNumber');
-  const numberButtons = document.querySelectorAll('.number-btn');
-  const timerBar = document.getElementById('timerBar');
-  const resultEl = document.getElementById('result');
-  const realNumberEl = document.getElementById('realNumber');
-  const outcomeEl = document.getElementById('outcome');
-  const correctCountEl = document.getElementById('correctCount');
-  const missCountEl = document.getElementById('missCount');
-
-  let countdownTimer = null;
-  let roundActive = false;
-  let correct = 0;
-  let misses = 0;
-  let lastTickSecond = null;
-  let selectedNumber = null;
-
-  function resetUI() {
-    timerBar.style.width = '0%';
-    resultEl.classList.add('hidden');
-    realNumberEl.textContent = '-';
-    outcomeEl.textContent = '';
-    selectedNumber = null;
-    selectedNumberDisplay.textContent = '—';
-    numberButtons.forEach(btn => btn.classList.remove('active'));
-  }
-
-  function selectNumber(num) {
-    selectedNumber = num;
-    guessInput.value = num;
-    selectedNumberDisplay.textContent = num;
-    numberButtons.forEach(btn => {
-      btn.classList.toggle('active', parseInt(btn.dataset.number) === num);
-    });
-  }
-
-  function enablePlay(enable) {
-    numberButtons.forEach(btn => btn.disabled = !enable);
-    submitBtn.disabled = !enable;
-  }
-
-  function updateMuteButton() {
-    if (!audioToggleBtn) return;
-    audioToggleBtn.textContent = audioManager.isMuted ? 'Unmute Audio' : 'Mute Audio';
-    audioToggleBtn.setAttribute('aria-pressed', String(audioManager.isMuted));
-  }
-
-  function handleRoundEndSound(correctGuess, timedOut) {
-    if (timedOut) {
-      audioManager.playSound('timeout');
-      return;
-    }
-    audioManager.playSound(correctGuess ? 'success' : 'fail');
-  }
-
-  async function endRound(guessValue, timedOut = false) {
-    if (!roundActive) return;
-    roundActive = false;
-    enablePlay(false);
-    clearInterval(countdownTimer);
-
-    try {
-      const payload = { guess: guessValue === undefined ? null : Number(guessValue) };
-      const res = await rm.postJSON('guess.php', payload);
-      realNumberEl.textContent = res.real;
-      if (res.correct) {
-        outcomeEl.textContent = '🎉 Correct!';
-        correct += 1;
-        correctCountEl.textContent = String(correct);
-      } else {
-        outcomeEl.textContent = '❌ Miss — your guess: ' + (res.guess === null ? '—' : res.guess);
-        misses += 1;
-        missCountEl.textContent = String(misses);
-      }
-      resultEl.classList.remove('hidden');
-      handleRoundEndSound(res.correct, timedOut);
-    } catch (err) {
-      outcomeEl.textContent = 'Error: ' + err.message;
-      resultEl.classList.remove('hidden');
-      audioManager.playSound('fail');
-    }
-  }
-
-  function updateTimer(startTime, duration) {
-    const elapsed = Date.now() - startTime;
-    const percent = Math.max(0, 100 - (elapsed / duration) * 100);
-    timerBar.style.width = `${percent}%`;
-
-    const remainingSeconds = Math.ceil((duration - elapsed) / 1000);
-    if (remainingSeconds <= 3 && remainingSeconds > 0 && remainingSeconds !== lastTickSecond) {
-      lastTickSecond = remainingSeconds;
-      audioManager.playSound('tick');
-    }
-
-    if (elapsed >= duration) {
-      endRound(selectedNumber !== null ? selectedNumber : null, true);
-    }
-  }
-
-  function startRound() {
-    resetUI();
-    audioManager.init();
-    audioManager.playSound('start');
-    roundActive = true;
-    enablePlay(true);
-    resultEl.classList.add('hidden');
-
-    lastTickSecond = null;
-    const duration = 10000;
-    const startTime = Date.now();
-    timerBar.style.width = '100%';
-    clearInterval(countdownTimer);
-    countdownTimer = setInterval(() => {
-      if (!roundActive) {
-        clearInterval(countdownTimer);
-        return;
-      }
-      updateTimer(startTime, duration);
-    }, 100);
-  }
-
-  startBtn.addEventListener('click', startRound);
-
-  numberButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (!roundActive) return;
-      selectNumber(parseInt(btn.dataset.number));
-      audioManager.playSound('click');
-    });
-  });
-
-  submitBtn.addEventListener('click', () => {
-    if (!roundActive) return;
-    audioManager.playSound('click');
-    const value = selectedNumber !== null ? selectedNumber : null;
-    endRound(value);
-  });
-
-  if (audioToggleBtn) {
-    updateMuteButton();
-    audioToggleBtn.addEventListener('click', () => {
-      const muted = audioManager.toggleMute();
-      updateMuteButton();
-      if (!muted) {
-        audioManager.playSound('click');
-      }
-    });
-  }
-
-  guessInput.addEventListener('keydown', (event) => {
-    if (roundActive && event.key >= '1' && event.key <= '9') {
-      selectNumber(parseInt(event.key));
-      audioManager.playSound('click');
-    } else if (roundActive && event.key === '0') {
-      selectNumber(10);
-      audioManager.playSound('click');
-    } else if (event.key === 'Enter' && roundActive && selectedNumber !== null) {
-      submitBtn.click();
-    }
-  });
-
-  updateMuteButton();
-  resetUI();
-  enablePlay(false);
+// Initialize global managers when app loads
+window.addEventListener('DOMContentLoaded', () => {
+  window.requestManager = new RequestManager();
+  window.audioManager = new AudioManager();
 });
