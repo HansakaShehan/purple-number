@@ -13,6 +13,7 @@ class LobbyScreen {
         document.getElementById('join-room-btn').addEventListener('click', () => this.joinRoom());
         document.getElementById('logout-btn').addEventListener('click', () => this.logout());
         document.getElementById('save-config-btn').addEventListener('click', () => this.saveConfig());
+        document.getElementById('view-leaderboard-btn').addEventListener('click', () => window.router.goToLeaderboard());
 
         // Screen lifecycle
         window.addEventListener('screen-changed', (e) => {

@@ -1,5 +1,8 @@
 <?php
-require_once __DIR__ . '/../../config.php';
+session_start();
+require_once __DIR__ . '/../../db.php';
+
+header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
@@ -25,11 +28,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
+        $pdo = Database::getInstance()->getPDO();
+        
+        // Check if username already exists
+        $checkStmt = $pdo->prepare('SELECT id FROM users WHERE username = ?');
+        $checkStmt->execute([$username]);
+        if ($checkStmt->fetch()) {
+            http_response_code(409);
+            echo json_encode(['error' => 'Username already exists']);
+            exit;
+        }
+        
         $passwordHash = password_hash($password, PASSWORD_BCRYPT);
-        $stmt = $db->prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)');
+        $stmt = $pdo->prepare('INSERT INTO users (username, password_hash) VALUES (?, ?)');
         $stmt->execute([$username, $passwordHash]);
 
-        $userId = $db->lastInsertId();
+        $userId = $pdo->lastInsertId();
         $_SESSION['user_id'] = $userId;
         $_SESSION['username'] = $username;
         $_SESSION['is_admin'] = 0;
@@ -43,10 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]
         ]);
     } catch (PDOException $e) {
-        http_response_code(409);
-        echo json_encode(['error' => 'Username already exists']);
+        http_response_code(500);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
     }
 } else {
     http_response_code(405);
     echo json_encode(['error' => 'Method not allowed']);
 }
+?>

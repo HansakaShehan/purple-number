@@ -50,6 +50,7 @@ class AuthScreen {
 
             if (result.success) {
                 window.currentUser = result.user;
+                updateTopBar();
                 window.router.goToLobby();
             }
         } catch (error) {
@@ -73,6 +74,7 @@ class AuthScreen {
 
             if (result.success) {
                 window.currentUser = result.user;
+                updateTopBar();
                 window.router.goToLobby();
             }
         } catch (error) {

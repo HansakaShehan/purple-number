@@ -55,6 +55,8 @@ class Database {
         $result = $this->pdo->query("SELECT 1 FROM information_schema.tables WHERE table_schema = '{$this->database}' AND table_name = 'users' LIMIT 1");
         
         if ($result && $result->fetch()) {
+            // Tables exist - check if we need to add total_gems column
+            $this->migrateSchema();
             return; // Tables already exist
         }
 
@@ -65,7 +67,9 @@ class Database {
                 username VARCHAR(255) UNIQUE NOT NULL,
                 password_hash VARCHAR(255) NOT NULL,
                 is_admin TINYINT DEFAULT 0,
+                total_gems INT DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 INDEX idx_username (username)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -113,6 +117,18 @@ class Database {
 
         // Insert default admin config
         $this->pdo->exec("INSERT INTO admin_config (id, rounds_count, turn_duration_seconds) VALUES (1, 20, 10) ON DUPLICATE KEY UPDATE id=id");
+    }
+
+    private function migrateSchema() {
+        // Add total_gems column if it doesn't exist
+        $result = $this->pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '{$this->database}' AND TABLE_NAME = 'users' AND COLUMN_NAME = 'total_gems'");
+        if (!($result && $result->fetch())) {
+            try {
+                $this->pdo->exec("ALTER TABLE users ADD COLUMN total_gems INT DEFAULT 0 AFTER is_admin");
+            } catch (PDOException $e) {
+                // Column might already exist or other issue - silently continue
+            }
+        }
     }
 }
 

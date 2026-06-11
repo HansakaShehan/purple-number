@@ -15,6 +15,8 @@ class GameScreen {
         this.currentTurnStarted = false;  // Prevent duplicate turn timers
         this.lastGuessDisplayed = 0;  // Track last guess to avoid duplicate displays
         this.historyRowCount = 0;  // Track history rows to avoid duplicates
+        this.playerGems = {};  // Track gems for each player
+        window.gameScreen = this;  // Store reference globally for gem tracking
         this.setupEventListeners();
     }
 
@@ -32,6 +34,12 @@ class GameScreen {
             this.audioManager.toggleMute();
             this.updateAudioButton();
         });
+
+        // Leaderboard button
+        const leaderboardBtn = document.getElementById('bottom-leaderboard-btn');
+        if (leaderboardBtn) {
+            leaderboardBtn.addEventListener('click', () => window.router.goToLeaderboard());
+        }
 
         // Screen lifecycle
         window.addEventListener('screen-changed', (e) => {
@@ -58,6 +66,11 @@ class GameScreen {
     }
 
     async onScreenEnter() {
+        // Show sound preference dialog if first time
+        if (this.audioManager.needsSoundPreferenceDialog()) {
+            this.showSoundPreferenceDialog();
+        }
+
         // Get room code from lobby
         const roomCode = window.lobbyScreen?.currentRoom?.code;
         if (!roomCode) {
@@ -70,6 +83,13 @@ class GameScreen {
         this.selectedNumber = null;
         this.isMyTurn = false;
         this.gameStarted = false;
+        this.playerGems = {};  // Reset gems
+
+        // Show leaderboard button in bottom bar
+        const leaderboardBtn = document.getElementById('bottom-leaderboard-btn');
+        if (leaderboardBtn) {
+            leaderboardBtn.style.display = 'inline-block';
+        }
 
         // Load initial game state
         await this.loadGameState();
@@ -99,6 +119,12 @@ class GameScreen {
         }
         if (this.countdownTimer) {
             clearTimeout(this.countdownTimer);
+        }
+        
+        // Hide leaderboard button when leaving game screen
+        const leaderboardBtn = document.getElementById('bottom-leaderboard-btn');
+        if (leaderboardBtn) {
+            leaderboardBtn.style.display = 'none';
         }
     }
 
@@ -252,25 +278,34 @@ class GameScreen {
         document.getElementById('player1-name').textContent = p1.username;
         document.getElementById('player1-correct').textContent = p1.correct;
         document.getElementById('player1-misses').textContent = p1.incorrect;
+        document.getElementById('player1-gems').textContent = this.playerGems[p1.id] || 0;
 
         if (p2) {
             document.getElementById('player2-name').textContent = p2.username;
             document.getElementById('player2-correct').textContent = p2.correct;
             document.getElementById('player2-misses').textContent = p2.incorrect;
+            document.getElementById('player2-gems').textContent = this.playerGems[p2.id] || 0;
         }
+
+        // Update my gems display
+        const myId = parseInt(window.currentUser.id);
+        document.getElementById('my-gems').textContent = this.playerGems[myId] || 0;
 
         // Update round display
         const totalRounds = this.gameState.total_rounds || 20;
         const guessCount = this.gameState.total_guesses || 0;
         this.updateRoundDisplay(guessCount, totalRounds);
 
+        // Update bottom bar
+        this.updateBottomBar(guessCount, totalRounds);
+
         // Only update turn UI if game has started
         if (!this.gameStarted) return;
 
         // Determine if it's my turn - convert to integers for safe comparison
         const currentTurnId = parseInt(this.gameState.current_turn);
-        const myId = parseInt(window.currentUser.id);
-        this.isMyTurn = (currentTurnId === myId);
+        const myId2 = parseInt(window.currentUser.id);
+        this.isMyTurn = (currentTurnId === myId2);
 
         // Reset turn flag when turn changes
         if (this.isMyTurn && !this.currentTurnStarted) {
@@ -358,6 +393,13 @@ class GameScreen {
                 document.getElementById('outcome').textContent = result.guess.is_correct ? '✓ Correct!' : '✗ Wrong number';
                 document.getElementById('result').classList.remove('hidden');
 
+                // Award gems if correct
+                if (result.guess.is_correct) {
+                    const myId = parseInt(window.currentUser.id);
+                    this.playerGems[myId] = (this.playerGems[myId] || 0) + 10;
+                    this.showGemNotification(10);
+                }
+
                 if (this.audioManager) {
                     this.audioManager.playSound(result.guess.is_correct ? 'success' : 'fail');
                 }
@@ -422,10 +464,76 @@ class GameScreen {
         }
     }
 
-    endGame() {
+    updateBottomBar(guessCount, totalRounds) {
+        // Update round counter
+        document.getElementById('bottom-round').textContent = `${guessCount}/${totalRounds}`;
+
+        // Update status
+        let status = 'Ready';
+        if (!this.gameStarted) {
+            status = 'Waiting...';
+        } else if (this.isMyTurn) {
+            status = 'Your Turn';
+        } else {
+            status = 'Watching';
+        }
+        document.getElementById('bottom-status').textContent = status;
+
+        // Update score (my player stats)
+        const myId = parseInt(window.currentUser.id);
+        const myPlayer = this.gameState.players.find(p => parseInt(p.id) === myId);
+        if (myPlayer) {
+            document.getElementById('bottom-score').textContent = `${myPlayer.correct}/${myPlayer.correct + myPlayer.incorrect}`;
+        }
+    }
+
+    showSoundPreferenceDialog() {
+        const modal = document.getElementById('sound-preference-modal');
+        const enableBtn = document.getElementById('sound-enable-btn');
+        const disableBtn = document.getElementById('sound-disable-btn');
+
+        if (!modal || !enableBtn || !disableBtn) return;
+
+        modal.classList.remove('hidden');
+
+        // Remove old listeners
+        const newEnableBtn = enableBtn.cloneNode(true);
+        const newDisableBtn = disableBtn.cloneNode(true);
+        enableBtn.replaceWith(newEnableBtn);
+        disableBtn.replaceWith(newDisableBtn);
+
+        newEnableBtn.addEventListener('click', () => {
+            this.audioManager.setSoundPreference(true);
+            this.audioManager.init();
+            modal.classList.add('hidden');
+            this.updateAudioButton();
+        });
+
+        newDisableBtn.addEventListener('click', () => {
+            this.audioManager.setSoundPreference(false);
+            modal.classList.add('hidden');
+            this.updateAudioButton();
+        });
+    }
+
+    async endGame() {
         // Stop polling and timers
         if (this.pollingInterval) clearInterval(this.pollingInterval);
         if (this.gameTimer) clearTimeout(this.gameTimer);
+
+        // Complete the game in database
+        try {
+            await this.requestManager.postJSON('api/game/complete.php', {
+                room_code: this.roomCode
+            });
+            
+            // Update topbar with new gem count
+            if (window.updateTopBarGems) {
+                window.updateTopBarGems();
+            }
+        } catch (e) {
+            console.error('Failed to complete game:', e);
+        }
 
         // Go to results screen
         window.router.goToResults();
@@ -445,6 +553,23 @@ class GameScreen {
         } else {
             playArea.classList.add('hidden');
         }
+    }
+
+    showGemNotification(gems) {
+        const notification = document.createElement('div');
+        notification.className = 'gem-notification';
+        notification.innerHTML = `<span>+${gems} 💎</span>`;
+        document.body.appendChild(notification);
+
+        // Trigger animation
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 10);
+
+        // Remove after animation
+        setTimeout(() => {
+            notification.remove();
+        }, 2000);
     }
 
     updateAudioButton() {

@@ -6,7 +6,8 @@ class Router {
             'login': document.getElementById('login-screen'),
             'lobby': document.getElementById('lobby-screen'),
             'game': document.getElementById('game-screen'),
-            'results': document.getElementById('results-screen')
+            'results': document.getElementById('results-screen'),
+            'leaderboard': document.getElementById('leaderboard-screen')
         };
         this.init();
     }
@@ -24,6 +25,9 @@ class Router {
             if (data.logged_in) {
                 // User is logged in, go to lobby
                 window.currentUser = data.user;
+                if (window.updateTopBar) {
+                    window.updateTopBar();
+                }
                 this.goTo('lobby');
             } else {
                 // User not logged in, stay at login
@@ -56,6 +60,10 @@ class Router {
 
     goToLogin() {
         window.currentUser = null;
+        const badge = document.getElementById('top-user-display');
+        if (badge) {
+            badge.textContent = '';
+        }
         this.goTo('login');
     }
 
@@ -69,6 +77,10 @@ class Router {
 
     goToResults() {
         this.goTo('results');
+    }
+
+    goToLeaderboard() {
+        this.goTo('leaderboard');
     }
 }
 

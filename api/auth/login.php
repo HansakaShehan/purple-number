@@ -1,5 +1,8 @@
 <?php
-require_once __DIR__ . '/../../config.php';
+session_start();
+require_once __DIR__ . '/../../db.php';
+
+header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents('php://input'), true);
@@ -13,7 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
-        $stmt = $db->prepare('SELECT id, username, password_hash, is_admin FROM users WHERE username = ?');
+        $pdo = Database::getInstance()->getPDO();
+        $stmt = $pdo->prepare('SELECT id, username, password_hash, is_admin FROM users WHERE username = ?');
         $stmt->execute([$username]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -36,9 +40,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } catch (PDOException $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Database error']);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
     }
 } else {
     http_response_code(405);
     echo json_encode(['error' => 'Method not allowed']);
 }
+?>

@@ -1,19 +1,32 @@
 // RequestManager - API communication
 class RequestManager {
   async postJSON(url, data = {}) {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    
-    const json = await res.json();
-    
-    if (!res.ok) {
-      throw json;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      
+      const text = await res.text();
+      let json;
+      
+      try {
+        json = JSON.parse(text);
+      } catch (parseError) {
+        console.error('JSON Parse error - Response text:', text.substring(0, 200));
+        throw new Error('Invalid JSON response: ' + text.substring(0, 100));
+      }
+      
+      if (!res.ok) {
+        throw json;
+      }
+      
+      return json;
+    } catch (error) {
+      console.error('postJSON error:', error);
+      throw error;
     }
-    
-    return json;
   }
 }
 
@@ -26,6 +39,18 @@ class AudioManager {
     this.soundGain = null;
     this.isMuted = localStorage.getItem('purple-guess-muted') === 'true';
     this.musicStarted = false;
+    this.soundPreferenceSet = localStorage.getItem('purple-guess-sound-preference-set') === 'true';
+  }
+
+  setSoundPreference(enabled) {
+    this.isMuted = !enabled;
+    this.soundPreferenceSet = true;
+    localStorage.setItem('purple-guess-muted', String(this.isMuted));
+    localStorage.setItem('purple-guess-sound-preference-set', 'true');
+  }
+
+  needsSoundPreferenceDialog() {
+    return !this.soundPreferenceSet;
   }
 
   init() {
@@ -185,8 +210,136 @@ class AudioManager {
   }
 }
 
+// Helper function to update top bar with user info
+function updateTopBar() {
+  if (window.currentUser) {
+    const badge = document.getElementById('top-user-display');
+    if (badge) {
+      badge.textContent = `👤 ${window.currentUser.username}`;
+    }
+    updateTopBarGems();
+  }
+}
+
+window.updateTopBar = updateTopBar;
+
+function updateTopBarGems() {
+  const gemsDisplay = document.getElementById('top-gems-display');
+  if (!gemsDisplay) return;
+  
+  // Fetch real gems from database
+  fetch('api/user/gems.php')
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        gemsDisplay.textContent = `💎 ${data.gems}`;
+        gemsDisplay.style.display = 'inline-block';
+      } else {
+        gemsDisplay.style.display = 'none';
+      }
+    })
+    .catch(err => {
+      console.error('Failed to fetch gems:', err);
+      gemsDisplay.style.display = 'none';
+    });
+}
+
+function updateBottomBarVisibility() {
+  if (!window.router) return;
+  
+  const homeBtn = document.getElementById('home-btn');
+  const leaderboardBtn = document.getElementById('bottom-leaderboard-btn');
+  const currentScreen = window.router.currentScreen;
+  
+  // Show buttons on all screens except login and register
+  const showButtons = currentScreen !== 'login';
+  
+  if (homeBtn) homeBtn.style.display = showButtons ? 'inline-block' : 'none';
+  if (leaderboardBtn) leaderboardBtn.style.display = showButtons ? 'inline-block' : 'none';
+}
+
 // Initialize global managers when app loads
 window.addEventListener('DOMContentLoaded', () => {
   window.requestManager = new RequestManager();
   window.audioManager = new AudioManager();
+  
+  // Initialize language selector
+  const langEn = document.getElementById('lang-en');
+  const langSi = document.getElementById('lang-si');
+  
+  // Set active button based on current language
+  const currentLang = window.translationManager.getLanguage();
+  if (currentLang === 'si') {
+    langEn.classList.remove('active');
+    langSi.classList.add('active');
+  }
+  
+  // Language button event listeners
+  if (langEn) {
+    langEn.addEventListener('click', () => {
+      window.translationManager.setLanguage('en');
+      langEn.classList.add('active');
+      langSi.classList.remove('active');
+    });
+  }
+  if (langSi) {
+    langSi.addEventListener('click', () => {
+      window.translationManager.setLanguage('si');
+      langSi.classList.add('active');
+      langEn.classList.remove('active');
+    });
+  }
+  
+  // Apply initial translations
+  window.translationManager.updatePageText();
+  
+  updateTopBar();
+
+  // Logo click to go home
+  const logoEl = document.getElementById('logo-home');
+  if (logoEl) {
+    logoEl.addEventListener('click', () => {
+      if (window.router) {
+        window.router.goToLobby();
+      }
+    });
+  }
+
+  // Home button click
+  const homeBtn = document.getElementById('home-btn');
+  if (homeBtn) {
+    homeBtn.addEventListener('click', () => {
+      if (window.router) {
+        window.router.goToLobby();
+      }
+    });
+  }
+
+  // Leaderboard button click (bottom bar)
+  const leaderboardBtn = document.getElementById('bottom-leaderboard-btn');
+  if (leaderboardBtn) {
+    leaderboardBtn.addEventListener('click', () => {
+      if (window.router) {
+        window.router.goToLeaderboard();
+      }
+    });
+  }
+
+  // Listen for screen changes to update bottom bar visibility
+  window.addEventListener('screen-changed', (e) => {
+    updateBottomBarVisibility();
+    updateTopBarGems();
+  });
+
+  // Show home button only on game and results screens
+  window.addEventListener('screen-changed', (e) => {
+    const homeBtn = document.getElementById('home-btn');
+    if (homeBtn) {
+      if (e.detail.screen === 'game' || e.detail.screen === 'results') {
+        homeBtn.style.display = 'block';
+      } else {
+        homeBtn.style.display = 'none';
+      }
+    }
+  });
 });

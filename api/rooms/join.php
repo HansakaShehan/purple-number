@@ -1,5 +1,8 @@
 <?php
-require_once __DIR__ . '/../../config.php';
+session_start();
+require_once __DIR__ . '/../../db.php';
+
+header('Content-Type: application/json');
 
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
@@ -18,7 +21,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
-        $stmt = $db->prepare('SELECT * FROM game_sessions WHERE room_code = ?');
+        $pdo = Database::getInstance()->getPDO();
+        
+        $stmt = $pdo->prepare('SELECT * FROM game_sessions WHERE room_code = ?');
         $stmt->execute([$roomCode]);
         $room = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -41,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Update room with player2
-        $updateStmt = $db->prepare('UPDATE game_sessions SET player2_id = ?, status = ? WHERE room_code = ?');
+        $updateStmt = $pdo->prepare('UPDATE game_sessions SET player2_id = ?, status = ? WHERE room_code = ?');
         $updateStmt->execute([$_SESSION['user_id'], 'ready', $roomCode]);
 
         echo json_encode([
@@ -50,13 +55,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'code' => $room['room_code'],
                 'player1_id' => $room['player1_id'],
                 'player2_id' => $_SESSION['user_id'],
-                'duration_seconds' => $room['duration_seconds'],
                 'status' => 'ready'
             ]
         ]);
     } catch (PDOException $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Database error']);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
     }
 } else {
     http_response_code(405);

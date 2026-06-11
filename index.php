@@ -4,93 +4,121 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Purple Guess — Multiplayer</title>
-    <link rel="stylesheet" href="assets/style.css">
+    <link rel="stylesheet" href="assets/style.css?v=1.1">
+    <script src="assets/translations.js?v=1.1"></script>
 </head>
 <body>
-    <main class="app">
+    <div class="app-container">
+        <!-- TOP BAR -->
+        <header class="top-bar">
+            <div class="top-bar-brand">
+                <h1 class="app-logo" id="logo-home" style="cursor: pointer;">🎲 Purple Guess</h1>
+            </div>
+            <div class="top-bar-actions">
+                <div class="language-selector">
+                    <button id="lang-en" class="lang-btn active" data-lang="en">EN</button>
+                    <button id="lang-si" class="lang-btn" data-lang="si">සි</button>
+                </div>
+                <span id="top-gems-display" class="topbar-gems" style="display: none;"></span>
+                <span id="top-user-display" class="user-badge"></span>
+            </div>
+        </header>
+
+        <!-- SCREENS CONTAINER -->
+        <div class="screens-wrapper">
         <!-- LOGIN SCREEN -->
         <div id="login-screen" class="screen active">
             <header class="hero">
-                <h1 class="title">Purple Guess</h1>
-                <p class="subtitle">Multiplayer number guessing battle</p>
+                <h1 class="title" data-i18n="app.title">Purple Guess</h1>
+                <p class="subtitle" data-i18n="app.subtitle">Multiplayer number guessing battle</p>
             </header>
 
             <section class="card">
                 <div class="auth-container">
                     <div class="auth-tabs">
-                        <button class="tab-btn active" data-tab="login-form">Login</button>
-                        <button class="tab-btn" data-tab="register-form">Register</button>
+                        <button class="tab-btn active" data-tab="login-form" data-i18n="login.tab">Login</button>
+                        <button class="tab-btn" data-tab="register-form" data-i18n="register.tab">Register</button>
                     </div>
 
                     <!-- Login Form -->
                     <form id="login-form" class="auth-form active">
-                        <input type="text" id="login-username" placeholder="Username" required>
-                        <input type="password" id="login-password" placeholder="Password" required>
-                        <button type="submit" class="btn primary full-width">Login</button>
+                        <input type="text" id="login-username" data-i18n-placeholder="login.username" placeholder="Username" required>
+                        <input type="password" id="login-password" data-i18n-placeholder="login.password" placeholder="Password" required>
+                        <button type="submit" class="btn primary full-width" data-i18n="login.button">Login</button>
                         <div id="login-error" class="error-message"></div>
                     </form>
 
                     <!-- Register Form -->
                     <form id="register-form" class="auth-form">
-                        <input type="text" id="register-username" placeholder="Username (3+ chars)" required>
-                        <input type="password" id="register-password" placeholder="Password (6+ chars)" required>
-                        <button type="submit" class="btn primary full-width">Register</button>
+                        <input type="text" id="register-username" data-i18n-placeholder="register.username" placeholder="Username (3+ chars)" required>
+                        <input type="password" id="register-password" data-i18n-placeholder="register.password" placeholder="Password (6+ chars)" required>
+                        <button type="submit" class="btn primary full-width" data-i18n="register.button">Register</button>
                         <div id="register-error" class="error-message"></div>
                     </form>
                 </div>
             </section>
 
-            <footer class="footer">Built with ❤️ — Purple theme</footer>
+            <footer class="footer" data-i18n="footer.credit">Developed by HanSakaSheHan ❤️</footer>
         </div>
 
         <!-- LOBBY SCREEN -->
         <div id="lobby-screen" class="screen">
             <header class="hero">
-                <h1 class="title">Purple Guess</h1>
+                <h1 class="title" data-i18n="app.title">Purple Guess</h1>
                 <div class="user-info">
                     <span id="user-display">User</span>
-                    <button id="logout-btn" class="btn secondary small">Logout</button>
+                    <button id="logout-btn" class="btn secondary small" data-i18n="lobby.logout">Logout</button>
                 </div>
             </header>
 
             <section class="card">
                 <div class="lobby-container">
                     <div class="lobby-section">
-                        <h2>Create Room</h2>
-                        <button id="create-room-btn" class="btn primary">Create New Room</button>
+                        <h2 data-i18n="lobby.create">Create Room</h2>
+                        <button id="create-room-btn" class="btn primary" data-i18n="lobby.createButton">Create New Room</button>
                         <div id="created-room" class="hidden">
-                            <p>Room Code: <strong id="room-code-display">—</strong></p>
-                            <button id="copy-code-btn" class="btn secondary">Copy Code</button>
-                            <p class="muted">Waiting for opponent to join...</p>
+                            <p><span data-i18n="lobby.roomCode">Room Code:</span> <strong id="room-code-display">—</strong></p>
+                            <button id="copy-code-btn" class="btn secondary" data-i18n="lobby.copy">Copy Code</button>
+                            <p class="muted" data-i18n="lobby.waiting">Waiting for opponent to join...</p>
                         </div>
                     </div>
 
                     <div class="lobby-section">
-                        <h2>Join Room</h2>
-                        <input type="text" id="join-code-input" placeholder="Enter room code" maxlength="4">
-                        <button id="join-room-btn" class="btn primary">Join Room</button>
+                        <h2 data-i18n="lobby.join">Join Room</h2>
+                        <input type="text" id="join-code-input" data-i18n-placeholder="lobby.joinInput" placeholder="Enter room code" maxlength="4">
+                        <button id="join-room-btn" class="btn primary" data-i18n="lobby.joinButton">Join Room</button>
                         <div id="join-error" class="error-message"></div>
                     </div>
 
                     <div id="admin-panel" class="lobby-section hidden">
-                        <h2>⚙️ Admin Settings</h2>
-                        <label>Total Rounds (5-100)</label>
+                        <h2>⚙️ <span data-i18n="lobby.admin">Admin Settings</span></h2>
+                        <label data-i18n="lobby.rounds">Total Rounds (5-100)</label>
                         <input type="number" id="rounds-count-input" min="5" max="100" value="20">
-                        <button id="save-config-btn" class="btn primary">Save Settings</button>
+                        <button id="save-config-btn" class="btn primary" data-i18n="lobby.save">Save Settings</button>
                         <div id="admin-message" class="message"></div>
                     </div>
                 </div>
+
+                <div style="text-align: center; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border);">
+                    <button id="view-leaderboard-btn" class="btn secondary">🏆 <span data-i18n="lobby.leaderboard">View Leaderboard</span></button>
+                </div>
             </section>
 
-            <footer class="footer">Built with ❤️ — Purple theme</footer>
+            <footer class="footer" data-i18n="footer.credit">Developed by HanSakaSheHan ❤️</footer>
         </div>
 
         <!-- GAME SCREEN -->
         <div id="game-screen" class="screen">
             <header class="hero">
                 <h1 class="title">Purple Guess — Battle</h1>
-                <div class="game-timer">
-                    <span id="game-time">5:00</span>
+                <div class="game-header-stats">
+                    <div class="game-timer">
+                        <span id="game-time">5:00</span>
+                    </div>
+                    <div class="my-gems-display">
+                        <span class="gem-label">💎 My Gems:</span>
+                        <span id="my-gems" class="gem-count">0</span>
+                    </div>
                 </div>
             </header>
 
@@ -105,6 +133,7 @@
                         <div class="player-stats">
                             <div class="stat"><span class="label">Correct:</span> <span id="player1-correct">0</span></div>
                             <div class="stat"><span class="label">Misses:</span> <span id="player1-misses">0</span></div>
+                            <div class="stat"><span class="label">💎 Gems:</span> <span id="player1-gems">0</span></div>
                         </div>
                     </div>
 
@@ -117,6 +146,7 @@
                         </div>
                         <div class="player-stats">
                             <div class="stat"><span class="label">Correct:</span> <span id="player2-correct">0</span></div>
+                            <div class="stat"><span class="label">💎 Gems:</span> <span id="player2-gems">0</span></div>
                             <div class="stat"><span class="label">Misses:</span> <span id="player2-misses">0</span></div>
                         </div>
                     </div>
@@ -184,11 +214,38 @@
                 </div>
             </section>
 
-            <footer class="footer">Built with ❤️ — Purple theme and animations</footer>
-        </div>
+            <footer class="footer">Developed by HanSakaSheHan ❤️</footer>
+        </main>
 
-        <!-- RESULTS SCREEN -->
-        <div id="results-screen" class="screen">
+        <!-- BOTTOM BAR -->
+        <footer class="bottom-bar">
+            <div class="bottom-bar-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Status</span>
+                    <span id="bottom-status" class="stat-value">Ready</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Round</span>
+                    <span id="bottom-round" class="stat-value">-</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- SOUND PREFERENCE MODAL (First time only) -->
+    <div id="sound-preference-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2>🔊 Game Sounds</h2>
+            <p>Would you like to enable sound effects and background music?</p>
+            <div class="modal-buttons">
+                <button id="sound-enable-btn" class="btn primary">✓ Enable Sounds</button>
+                <button id="sound-disable-btn" class="btn secondary">✗ Disable Sounds</button>
+            </div>
+            <p class="modal-hint">You can change this anytime during gameplay</p>
+        </div>
+    </div>
+
+    <div id="results-screen" class="screen">
             <header class="hero">
                 <h1 class="title">Game Over!</h1>
             </header>
@@ -222,16 +279,63 @@
                 </div>
             </section>
 
-            <footer class="footer">Built with ❤️ — Purple theme</footer>
+            <footer class="footer">Developed by HanSakaSheHan ❤️</footer>
         </div>
-    </main>
+
+        <!-- LEADERBOARD SCREEN -->
+        <div id="leaderboard-screen" class="screen">
+            <header class="hero">
+                <h1 class="title">🏆 Leaderboard</h1>
+                <p class="subtitle">Top players ranked by wins</p>
+            </header>
+
+            <section class="card">
+                <div class="leaderboard-container">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 10%;">Rank</th>
+                                <th style="width: 25%;">Player</th>
+                                <th style="width: 10%;">Games</th>
+                                <th style="width: 10%;">Wins</th>
+                                <th style="width: 12%;">Win %</th>
+                                <th style="width: 18%;">Accuracy</th>
+                                <th style="width: 15%;">Correct</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body">
+                            <tr><td colspan="7" style="text-align: center; padding: 20px;">Loading leaderboard...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div class="action-buttons">
+                <button id="leaderboard-back-btn" class="btn primary">← Back to Lobby</button>
+            </div>
+
+            <footer class="footer">Developed by HanSakaSheHan ❤️</footer>
+        </div>
+        </div>
+
+        <!-- BOTTOM BAR -->
+        <footer class="bottom-bar">
+            <button id="home-btn" class="btn secondary" style="display: none;">🏠 Home</button>
+            <button id="bottom-leaderboard-btn" class="btn secondary" style="display: none;">🏆 Leaderboard</button>
+            <!-- Hidden elements for JavaScript functionality -->
+            <div id="bottom-status" style="display: none;"></div>
+            <div id="bottom-round" style="display: none;"></div>
+            <div id="bottom-score" style="display: none;"></div>
+        </footer>
+    </div>
 
     <!-- Scripts -->
-    <script src="assets/app.js"></script>
-    <script src="assets/screens/router.js"></script>
-    <script src="assets/screens/auth.js"></script>
-    <script src="assets/screens/lobby.js"></script>
-    <script src="assets/screens/game.js"></script>
-    <script src="assets/screens/results.js"></script>
+    <script src="assets/app.js?v=1.1"></script>
+    <script src="assets/screens/router.js?v=1.1"></script>
+    <script src="assets/screens/auth.js?v=1.1"></script>
+    <script src="assets/screens/lobby.js?v=1.1"></script>
+    <script src="assets/screens/game.js?v=1.1"></script>
+    <script src="assets/screens/results.js?v=1.1"></script>
+    <script src="assets/screens/leaderboard.js?v=1.1"></script>
 </body>
 </html>
