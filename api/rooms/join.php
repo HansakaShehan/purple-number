@@ -23,6 +23,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $pdo = Database::getInstance()->getPDO();
         
+        // First verify that the current user exists in database
+        $userCheckStmt = $pdo->prepare('SELECT id FROM users WHERE id = ?');
+        $userCheckStmt->execute([$_SESSION['user_id']]);
+        if (!$userCheckStmt->fetch()) {
+            http_response_code(401);
+            echo json_encode(['error' => 'User session invalid. Please log in again.']);
+            exit;
+        }
+        
         $stmt = $pdo->prepare('SELECT * FROM game_sessions WHERE room_code = ?');
         $stmt->execute([$roomCode]);
         $room = $stmt->fetch(PDO::FETCH_ASSOC);

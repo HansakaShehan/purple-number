@@ -229,18 +229,30 @@ function updateTopBarGems() {
   
   // Fetch real gems from database
   fetch('api/user/gems.php')
-    .then(res => res.json())
+    .then(res => {
+      // Handle 401 (unauthorized/invalid session)
+      if (res.status === 401) {
+        // Session invalid, redirect to login
+        console.warn('Session invalid, redirecting to login');
+        window.location.href = '/';
+        throw new Error('Session invalid');
+      }
+      return res.json();
+    })
     .then(data => {
       if (data.success) {
         gemsDisplay.textContent = `💎 ${data.gems}`;
         gemsDisplay.style.display = 'inline-block';
       } else {
-        gemsDisplay.style.display = 'none';
+        // Show 0 gems if error or user not found
+        gemsDisplay.textContent = '💎 0';
+        gemsDisplay.style.display = 'inline-block';
       }
     })
     .catch(err => {
-      console.error('Failed to fetch gems:', err);
-      gemsDisplay.style.display = 'none';
+      console.error('postJSON error:', err.message, ' in gems fetch');
+      gemsDisplay.textContent = '💎 0';
+      gemsDisplay.style.display = 'inline-block';
     });
 }
 
@@ -248,13 +260,15 @@ function updateBottomBarVisibility() {
   if (!window.router) return;
   
   const homeBtn = document.getElementById('home-btn');
+  const historyBtn = document.getElementById('bottom-history-btn');
   const leaderboardBtn = document.getElementById('bottom-leaderboard-btn');
   const currentScreen = window.router.currentScreen;
   
-  // Show buttons on all screens except login and register
+  // Show buttons on all screens except login
   const showButtons = currentScreen !== 'login';
   
   if (homeBtn) homeBtn.style.display = showButtons ? 'inline-block' : 'none';
+  if (historyBtn) historyBtn.style.display = showButtons ? 'inline-block' : 'none';
   if (leaderboardBtn) leaderboardBtn.style.display = showButtons ? 'inline-block' : 'none';
 }
 
@@ -262,33 +276,6 @@ function updateBottomBarVisibility() {
 window.addEventListener('DOMContentLoaded', () => {
   window.requestManager = new RequestManager();
   window.audioManager = new AudioManager();
-  
-  // Initialize language selector
-  const langEn = document.getElementById('lang-en');
-  const langSi = document.getElementById('lang-si');
-  
-  // Set active button based on current language
-  const currentLang = window.translationManager.getLanguage();
-  if (currentLang === 'si') {
-    langEn.classList.remove('active');
-    langSi.classList.add('active');
-  }
-  
-  // Language button event listeners
-  if (langEn) {
-    langEn.addEventListener('click', () => {
-      window.translationManager.setLanguage('en');
-      langEn.classList.add('active');
-      langSi.classList.remove('active');
-    });
-  }
-  if (langSi) {
-    langSi.addEventListener('click', () => {
-      window.translationManager.setLanguage('si');
-      langSi.classList.add('active');
-      langEn.classList.remove('active');
-    });
-  }
   
   // Apply initial translations
   window.translationManager.updatePageText();
@@ -315,6 +302,16 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // History button click (bottom bar)
+  const historyBtn = document.getElementById('bottom-history-btn');
+  if (historyBtn) {
+    historyBtn.addEventListener('click', () => {
+      if (window.router) {
+        window.router.goToHistory();
+      }
+    });
+  }
+
   // Leaderboard button click (bottom bar)
   const leaderboardBtn = document.getElementById('bottom-leaderboard-btn');
   if (leaderboardBtn) {
@@ -329,17 +326,5 @@ window.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('screen-changed', (e) => {
     updateBottomBarVisibility();
     updateTopBarGems();
-  });
-
-  // Show home button only on game and results screens
-  window.addEventListener('screen-changed', (e) => {
-    const homeBtn = document.getElementById('home-btn');
-    if (homeBtn) {
-      if (e.detail.screen === 'game' || e.detail.screen === 'results') {
-        homeBtn.style.display = 'block';
-      } else {
-        homeBtn.style.display = 'none';
-      }
-    }
   });
 });

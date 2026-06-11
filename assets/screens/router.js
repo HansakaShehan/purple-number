@@ -7,6 +7,7 @@ class Router {
             'lobby': document.getElementById('lobby-screen'),
             'game': document.getElementById('game-screen'),
             'results': document.getElementById('results-screen'),
+            'history': document.getElementById('history-screen'),
             'leaderboard': document.getElementById('leaderboard-screen')
         };
         this.init();
@@ -77,6 +78,10 @@ class Router {
 
     goToResults() {
         this.goTo('results');
+    }
+
+    goToHistory() {
+        this.goTo('history');
     }
 
     goToLeaderboard() {

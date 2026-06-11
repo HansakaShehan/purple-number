@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/helpers.php';
 
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
@@ -60,7 +61,14 @@ try {
     $p1StatsStmt->execute([$room['id'], $room['player1_id']]);
     $p1Stats = $p1StatsStmt->fetch(PDO::FETCH_ASSOC);
 
+    // Get player 1 gems
+    $p1GemsStmt = $db->prepare('SELECT total_gems FROM users WHERE id = ?');
+    $p1GemsStmt->execute([$room['player1_id']]);
+    $p1GemsData = $p1GemsStmt->fetch(PDO::FETCH_ASSOC);
+    $p1Gems = $p1GemsData['total_gems'] ?? 0;
+
     $p2Stats = null;
+    $p2Gems = 0;
     if ($room['player2_id']) {
         $p2StatsStmt = $db->prepare('
             SELECT 
@@ -72,6 +80,12 @@ try {
         ');
         $p2StatsStmt->execute([$room['id'], $room['player2_id']]);
         $p2Stats = $p2StatsStmt->fetch(PDO::FETCH_ASSOC);
+
+        // Get player 2 gems
+        $p2GemsStmt = $db->prepare('SELECT total_gems FROM users WHERE id = ?');
+        $p2GemsStmt->execute([$room['player2_id']]);
+        $p2GemsData = $p2GemsStmt->fetch(PDO::FETCH_ASSOC);
+        $p2Gems = $p2GemsData['total_gems'] ?? 0;
     }
 
     // Determine whose turn it is - Player 2 (joining player) goes first
@@ -90,6 +104,30 @@ try {
     $lastGuessStmt->execute([$room['id']]);
     $lastGuess = $lastGuessStmt->fetch(PDO::FETCH_ASSOC);
 
+    // Get current user's gem balance
+    $currentUserStmt = $db->prepare('SELECT total_gems FROM users WHERE id = ?');
+    $currentUserStmt->execute([$_SESSION['user_id']]);
+    $currentUserData = $currentUserStmt->fetch(PDO::FETCH_ASSOC);
+    $currentUserGems = $currentUserData['total_gems'] ?? 0;
+
+    // Get available categories for this round
+    $availableCategories = generateCategories($room['id'], $db);
+
+    // Get disabled numbers
+    $disabledNumbers = getDisabledNumbers($room['id'], $db);
+
+    // Get all guesses with category info
+    $allGuessesStmt = $db->prepare('
+        SELECT 
+            id, player_id, guessed_number, secret_number, is_correct, 
+            selected_category, category_cost, created_at
+        FROM guesses
+        WHERE session_id = ?
+        ORDER BY created_at ASC
+    ');
+    $allGuessesStmt->execute([$room['id']]);
+    $allGuesses = $allGuessesStmt->fetchAll(PDO::FETCH_ASSOC);
+
     echo json_encode([
         'success' => true,
         'game' => [
@@ -104,20 +142,39 @@ try {
                 'guessed_number' => (int)$lastGuess['guessed_number'],
                 'secret_number' => (int)$lastGuess['secret_number'],
                 'is_correct' => (int)$lastGuess['is_correct'],
-                'player_id' => (int)$lastGuess['player_id']
+                'player_id' => (int)$lastGuess['player_id'],
+                'selected_category' => $lastGuess['selected_category'] ?? '1-20',
+                'category_cost' => (int)($lastGuess['category_cost'] ?? 0)
             ] : null,
+            'current_user_gems' => (int)$currentUserGems,
+            'available_categories' => $availableCategories,
+            'disabled_numbers' => $disabledNumbers,
+            'all_guesses' => array_map(function($guess) {
+                return [
+                    'id' => (int)$guess['id'],
+                    'player_id' => (int)$guess['player_id'],
+                    'guessed_number' => (int)$guess['guessed_number'],
+                    'secret_number' => (int)$guess['secret_number'],
+                    'is_correct' => (int)$guess['is_correct'],
+                    'selected_category' => $guess['selected_category'] ?? '1-20',
+                    'category_cost' => (int)($guess['category_cost'] ?? 0),
+                    'created_at' => $guess['created_at']
+                ];
+            }, $allGuesses),
             'players' => [
                 [
                     'id' => $room['player1_id'],
                     'username' => $room['player1_username'],
                     'correct' => $p1Stats['correct_count'] ?? 0,
-                    'incorrect' => $p1Stats['incorrect_count'] ?? 0
+                    'incorrect' => $p1Stats['incorrect_count'] ?? 0,
+                    'gems' => (int)$p1Gems
                 ],
                 $room['player2_id'] ? [
                     'id' => $room['player2_id'],
                     'username' => $room['player2_username'],
                     'correct' => $p2Stats['correct_count'] ?? 0,
-                    'incorrect' => $p2Stats['incorrect_count'] ?? 0
+                    'incorrect' => $p2Stats['incorrect_count'] ?? 0,
+                    'gems' => (int)$p2Gems
                 ] : null
             ]
         ]

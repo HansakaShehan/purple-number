@@ -129,6 +129,53 @@ class Database {
                 // Column might already exist or other issue - silently continue
             }
         }
+
+        // Add selected_category column to guesses if it doesn't exist
+        $result = $this->pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '{$this->database}' AND TABLE_NAME = 'guesses' AND COLUMN_NAME = 'selected_category'");
+        if (!($result && $result->fetch())) {
+            try {
+                $this->pdo->exec("ALTER TABLE guesses ADD COLUMN selected_category VARCHAR(50) DEFAULT '1-20' AFTER is_correct");
+            } catch (PDOException $e) {
+                // Column might already exist or other issue - silently continue
+            }
+        }
+
+        // Add category_cost column to guesses if it doesn't exist
+        $result = $this->pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '{$this->database}' AND TABLE_NAME = 'guesses' AND COLUMN_NAME = 'category_cost'");
+        if (!($result && $result->fetch())) {
+            try {
+                $this->pdo->exec("ALTER TABLE guesses ADD COLUMN category_cost INT DEFAULT 0 AFTER selected_category");
+            } catch (PDOException $e) {
+                // Column might already exist or other issue - silently continue
+            }
+        }
+
+        // Add disabled_numbers column to game_sessions if it doesn't exist
+        $result = $this->pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '{$this->database}' AND TABLE_NAME = 'game_sessions' AND COLUMN_NAME = 'disabled_numbers'");
+        if (!($result && $result->fetch())) {
+            try {
+                $this->pdo->exec("ALTER TABLE game_sessions ADD COLUMN disabled_numbers JSON DEFAULT NULL AFTER status");
+            } catch (PDOException $e) {
+                // Column might already exist or other issue - silently continue
+            }
+        }
+
+        // Add round_disabled_at column to game_sessions if it doesn't exist
+        $result = $this->pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '{$this->database}' AND TABLE_NAME = 'game_sessions' AND COLUMN_NAME = 'round_disabled_at'");
+        if (!($result && $result->fetch())) {
+            try {
+                $this->pdo->exec("ALTER TABLE game_sessions ADD COLUMN round_disabled_at INT DEFAULT 0 AFTER disabled_numbers");
+            } catch (PDOException $e) {
+                // Column might already exist or other issue - silently continue
+            }
+        }
+        
+        // Update any existing rows with 999 to 0 (old sentinel value to new)
+        try {
+            $this->pdo->exec("UPDATE game_sessions SET round_disabled_at = 0 WHERE round_disabled_at = 999");
+        } catch (PDOException $e) {
+            // Might fail if column doesn't exist yet, silently continue
+        }
     }
 }
 

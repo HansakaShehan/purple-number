@@ -6,7 +6,7 @@ header('Content-Type: application/json');
 
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
-    echo json_encode(['error' => 'Not authenticated']);
+    echo json_encode(['error' => 'Not authenticated', 'success' => false]);
     exit;
 }
 
@@ -22,11 +22,14 @@ try {
             'gems' => (int)$user['total_gems']
         ]);
     } else {
-        http_response_code(404);
-        echo json_encode(['success' => false, 'error' => 'User not found']);
+        // User session exists but user not in database - session is invalid
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'User session invalid. Please log in again.']);
+        // Clear invalid session
+        session_destroy();
     }
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    echo json_encode(['success' => false, 'error' => 'Database error: ' . $e->getMessage()]);
 }
 ?>

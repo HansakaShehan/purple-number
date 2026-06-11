@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Purple Guess — Multiplayer</title>
-    <link rel="stylesheet" href="assets/style.css?v=1.1">
+    <link rel="stylesheet" href="assets/style.css?v=1.2">
     <script src="assets/translations.js?v=1.1"></script>
 </head>
 <body>
@@ -15,10 +15,6 @@
                 <h1 class="app-logo" id="logo-home" style="cursor: pointer;">🎲 Purple Guess</h1>
             </div>
             <div class="top-bar-actions">
-                <div class="language-selector">
-                    <button id="lang-en" class="lang-btn active" data-lang="en">EN</button>
-                    <button id="lang-si" class="lang-btn" data-lang="si">සි</button>
-                </div>
                 <span id="top-gems-display" class="topbar-gems" style="display: none;"></span>
                 <span id="top-user-display" class="user-badge"></span>
             </div>
@@ -168,7 +164,28 @@
 
                 <!-- Play Area -->
                 <div class="play-area" id="play-area">
-                    <div class="number-grid">
+                    <!-- Category Selector -->
+                    <div class="category-selector" id="category-selector">
+                        <h4>Select Category</h4>
+                        <div class="category-container">
+                            <!-- Free Category (Always available) -->
+                            <div class="category-group free-group">
+                                <div class="group-title">🎯 Free</div>
+                                <div class="category-options" id="free-categories">
+                                    <!-- Generated dynamically by JavaScript -->
+                                </div>
+                            </div>
+
+                            <!-- Paid Categories (Grouped) -->
+                            <div id="paid-categories-container" class="paid-categories-container">
+                                <!-- Generated dynamically by JavaScript -->
+                            </div>
+                        </div>
+                        <div id="category-message" class="category-message hidden"></div>
+                    </div>
+
+                    <!-- Number Grid (1-20) -->
+                    <div class="number-grid" id="number-grid">
                         <button class="number-btn" data-number="1">1</button>
                         <button class="number-btn" data-number="2">2</button>
                         <button class="number-btn" data-number="3">3</button>
@@ -179,15 +196,26 @@
                         <button class="number-btn" data-number="8">8</button>
                         <button class="number-btn" data-number="9">9</button>
                         <button class="number-btn" data-number="10">10</button>
+                        <button class="number-btn" data-number="11">11</button>
+                        <button class="number-btn" data-number="12">12</button>
+                        <button class="number-btn" data-number="13">13</button>
+                        <button class="number-btn" data-number="14">14</button>
+                        <button class="number-btn" data-number="15">15</button>
+                        <button class="number-btn" data-number="16">16</button>
+                        <button class="number-btn" data-number="17">17</button>
+                        <button class="number-btn" data-number="18">18</button>
+                        <button class="number-btn" data-number="19">19</button>
+                        <button class="number-btn" data-number="20">20</button>
                     </div>
                     <button id="submitBtn" class="btn" disabled>Send Guess</button>
                 </div>
-                <div class="selected-display">Selected: <span id="selectedNumber">—</span></div>
+                <div class="selected-display">Selected: <span id="selectedNumber">—</span> | Category: <span id="selectedCategory">—</span> | Fee: <span id="categoryFee">—</span> 💎</div>
 
                 <!-- Result Display -->
                 <div id="result" class="result hidden">
                     <div class="reveal">Your guess: <span id="guessedNumber">-</span></div>
                     <div class="reveal">Real number: <span id="realNumber">-</span></div>
+                    <div class="reveal time-display">⏱️ <span id="guessTime">0.0s</span></div>
                     <div id="outcome" class="outcome"></div>
                 </div>
 
@@ -260,16 +288,90 @@
                         <div>Player</div>
                         <div>Correct</div>
                         <div>Misses</div>
+                        <div>💎 Gems</div>
                     </div>
                     <div class="result-row">
                         <div id="result-p1-name">Player 1</div>
                         <div id="result-p1-correct">0</div>
                         <div id="result-p1-misses">0</div>
+                        <div id="result-p1-gems">0</div>
                     </div>
                     <div class="result-row">
                         <div id="result-p2-name">Player 2</div>
                         <div id="result-p2-correct">0</div>
                         <div id="result-p2-misses">0</div>
+                        <div id="result-p2-gems">0</div>
+                    </div>
+                </div>
+
+                <!-- Gem Breakdown Section -->
+                <div id="gem-breakdown" class="gem-breakdown-section hidden">
+                    <h3>💎 Gem Breakdown</h3>
+                    <div class="breakdown-grid">
+                        <div id="p1-breakdown" class="breakdown-box">
+                            <h4 id="p1-breakdown-name">Player 1</h4>
+                            <div class="breakdown-items">
+                                <div class="breakdown-item">
+                                    <span class="label">Free Category Wins:</span>
+                                    <span id="p1-free-wins">0</span> × 10 = <span id="p1-free-total">0</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <span class="label">Paid Category Wins:</span>
+                                    <span id="p1-paid-wins">0</span> × 20 = <span id="p1-paid-rewards">0</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <span class="label">Paid Category Costs:</span>
+                                    <span id="p1-paid-used">0</span> × 10 = <span id="p1-paid-costs">0</span>
+                                </div>
+                                <div class="breakdown-item total">
+                                    <span class="label">Net Gems:</span>
+                                    <span id="p1-net-gems">0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="p2-breakdown" class="breakdown-box">
+                            <h4 id="p2-breakdown-name">Player 2</h4>
+                            <div class="breakdown-items">
+                                <div class="breakdown-item">
+                                    <span class="label">Free Category Wins:</span>
+                                    <span id="p2-free-wins">0</span> × 10 = <span id="p2-free-total">0</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <span class="label">Paid Category Wins:</span>
+                                    <span id="p2-paid-wins">0</span> × 20 = <span id="p2-paid-rewards">0</span>
+                                </div>
+                                <div class="breakdown-item">
+                                    <span class="label">Paid Category Costs:</span>
+                                    <span id="p2-paid-used">0</span> × 10 = <span id="p2-paid-costs">0</span>
+                                </div>
+                                <div class="breakdown-item total">
+                                    <span class="label">Net Gems:</span>
+                                    <span id="p2-net-gems">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Game History Section -->
+                <div id="game-history" class="game-history-section">
+                    <h3>📋 Game History</h3>
+                    <div class="history-table-container">
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Round</th>
+                                    <th>Player</th>
+                                    <th>Guess</th>
+                                    <th>Answer</th>
+                                    <th>Result</th>
+                                    <th>Category</th>
+                                    <th>Gem Change</th>
+                                </tr>
+                            </thead>
+                            <tbody id="game-history-body">
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -278,6 +380,42 @@
                     <button id="lobby-btn" class="btn secondary">Back to Lobby</button>
                 </div>
             </section>
+
+            <footer class="footer">Developed by HanSakaSheHan ❤️</footer>
+        </div>
+
+        <!-- HISTORY SCREEN -->
+        <div id="history-screen" class="screen">
+            <header class="hero">
+                <h1 class="title">📋 Game History</h1>
+                <p class="subtitle">Your past games</p>
+            </header>
+
+            <section class="card">
+                <div id="history-empty" style="text-align: center; padding: 40px; color: var(--text-secondary); display: none !important;">
+                    No games yet. Play your first game!
+                </div>
+                <div class="history-container" id="history-container" style="display: block !important; background: rgba(0, 255, 0, 0.3) !important; border: 3px solid lime !important; min-height: 200px !important;">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 15%;">Date</th>
+                                <th style="width: 20%;">Opponents</th>
+                                <th style="width: 10%;">Your Score</th>
+                                <th style="width: 15%;">Opponent Score</th>
+                                <th style="width: 10%;">Result</th>
+                                <th style="width: 15%;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div class="action-buttons">
+                <button id="history-back-btn" class="btn primary">← Back to Lobby</button>
+            </div>
 
             <footer class="footer">Developed by HanSakaSheHan ❤️</footer>
         </div>
@@ -316,12 +454,14 @@
 
             <footer class="footer">Developed by HanSakaSheHan ❤️</footer>
         </div>
+
         </div>
 
         <!-- BOTTOM BAR -->
         <footer class="bottom-bar">
-            <button id="home-btn" class="btn secondary" style="display: none;">🏠 Home</button>
-            <button id="bottom-leaderboard-btn" class="btn secondary" style="display: none;">🏆 Leaderboard</button>
+            <button id="home-btn" class="btn secondary" style="display: none;">🏠 Hom</button>
+            <button id="bottom-history-btn" class="btn secondary" style="display: none;">📋 His</button>
+            <button id="bottom-leaderboard-btn" class="btn secondary" style="display: none;">🏆 Leadboad</button>
             <!-- Hidden elements for JavaScript functionality -->
             <div id="bottom-status" style="display: none;"></div>
             <div id="bottom-round" style="display: none;"></div>
@@ -330,12 +470,13 @@
     </div>
 
     <!-- Scripts -->
-    <script src="assets/app.js?v=1.1"></script>
-    <script src="assets/screens/router.js?v=1.1"></script>
-    <script src="assets/screens/auth.js?v=1.1"></script>
-    <script src="assets/screens/lobby.js?v=1.1"></script>
-    <script src="assets/screens/game.js?v=1.1"></script>
-    <script src="assets/screens/results.js?v=1.1"></script>
-    <script src="assets/screens/leaderboard.js?v=1.1"></script>
+    <script src="assets/app.js?v=1.2"></script>
+    <script src="assets/screens/router.js?v=1.2"></script>
+    <script src="assets/screens/auth.js?v=1.2"></script>
+    <script src="assets/screens/lobby.js?v=1.2"></script>
+    <script src="assets/screens/game.js?v=1.2"></script>
+    <script src="assets/screens/results.js?v=1.2"></script>
+    <script src="assets/screens/history.js?v=1.2"></script>
+    <script src="assets/screens/leaderboard.js?v=1.2"></script>
 </body>
 </html>

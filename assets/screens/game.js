@@ -5,6 +5,8 @@ class GameScreen {
         this.roomCode = null;
         this.gameState = null;
         this.selectedNumber = null;
+        this.selectedCategory = null;  // NEW: Track selected category
+        this.disabledNumbers = [];  // NEW: Track disabled/hidden numbers
         this.gameTimer = null;
         this.turnTimer = null;
         this.countdownTimer = null;
@@ -14,6 +16,9 @@ class GameScreen {
         this.gameStarted = false;
         this.currentTurnStarted = false;  // Prevent duplicate turn timers
         this.lastGuessDisplayed = 0;  // Track last guess to avoid duplicate displays
+        this.roundStartTime = null;   // Track when round started for timing
+        this.lastGuessTime = 0;       // Store last guess duration
+        this.lastTrackedGuessCount = 0;  // Track last guess count for round timing
         this.historyRowCount = 0;  // Track history rows to avoid duplicates
         this.playerGems = {};  // Track gems for each player
         window.gameScreen = this;  // Store reference globally for gem tracking
@@ -24,6 +29,11 @@ class GameScreen {
         // Number buttons
         document.querySelectorAll('.number-btn').forEach(btn => {
             btn.addEventListener('click', (e) => this.selectNumber(parseInt(e.target.dataset.number)));
+        });
+
+        // Category options (will be populated dynamically)
+        document.addEventListener('category-option-click', (e) => {
+            this.selectCategory(e.detail.category);
         });
 
         // Submit button
@@ -74,22 +84,20 @@ class GameScreen {
         // Get room code from lobby
         const roomCode = window.lobbyScreen?.currentRoom?.code;
         if (!roomCode) {
-            console.error('No room code available');
             window.router.goToLobby();
             return;
         }
 
         this.roomCode = roomCode;
         this.selectedNumber = null;
+        this.selectedCategory = null;  // NEW: Reset category
+        this.disabledNumbers = [];  // NEW: Reset disabled numbers
         this.isMyTurn = false;
         this.gameStarted = false;
         this.playerGems = {};  // Reset gems
-
-        // Show leaderboard button in bottom bar
-        const leaderboardBtn = document.getElementById('bottom-leaderboard-btn');
-        if (leaderboardBtn) {
-            leaderboardBtn.style.display = 'inline-block';
-        }
+        
+        // Clear history table for new game
+        this.clearHistoryTable();
 
         // Load initial game state
         await this.loadGameState();
@@ -120,12 +128,6 @@ class GameScreen {
         if (this.countdownTimer) {
             clearTimeout(this.countdownTimer);
         }
-        
-        // Hide leaderboard button when leaving game screen
-        const leaderboardBtn = document.getElementById('bottom-leaderboard-btn');
-        if (leaderboardBtn) {
-            leaderboardBtn.style.display = 'none';
-        }
     }
 
     async loadGameState() {
@@ -134,6 +136,46 @@ class GameScreen {
                 room_code: this.roomCode
             });
             this.gameState = result.game;
+            
+            // Initialize playerGems from game state (fixes initial display)
+            if (this.gameState.players) {
+                this.gameState.players.forEach(player => {
+                    if (player) {
+                        this.playerGems[player.id] = player.gems || 0;
+                    }
+                });
+            }
+            
+            // Track round start time on first load or when guess count changes
+            const currentGuessCount = this.gameState.total_guesses || 0;
+            if (!this.lastTrackedGuessCount || currentGuessCount > this.lastTrackedGuessCount) {
+                this.roundStartTime = Date.now();
+                this.lastTrackedGuessCount = currentGuessCount;
+            }
+            
+            // Update disabled numbers
+            this.disabledNumbers = this.gameState.disabled_numbers || [];
+            const currentRound = Math.ceil((this.gameState.total_guesses + 1) / 2);
+            const cyclePosition = (((currentRound - 1) % 4) + 1);
+            const cyclePhase = cyclePosition === 4 ? 'DISABLED' : 'normal';
+            
+            // Determine which pattern would be used
+            let pattern = 'random';
+            if (currentRound > 5) {
+                pattern = 'distance_progression';
+            } else if (currentRound > 2) {
+                pattern = 'quartile_cycling';
+            }
+            if (cyclePosition === 4) {
+                pattern = 'proximity_disabled';
+            }
+            
+            this.updateDisabledNumbersUI();
+            
+            // Display available categories
+            if (this.gameState.available_categories && !this.selectedCategory) {
+                this.displayCategories(this.gameState.available_categories);
+            }
             
             // Determine if it's my turn
             const currentTurnId = parseInt(this.gameState.current_turn);
@@ -145,18 +187,29 @@ class GameScreen {
                 const lastGuess = this.gameState.last_guess;
                 const guessNum = this.gameState.total_guesses || 0;
                 
+                // Calculate time elapsed for this guess
+                if (this.roundStartTime) {
+                    this.lastGuessTime = (Date.now() - this.roundStartTime) / 1000;
+                }
+                
                 // Only display if this guess is newer than what we last displayed
                 if (guessNum > this.lastGuessDisplayed) {
                     document.getElementById('guessedNumber').textContent = lastGuess.guessed_number;
                     document.getElementById('realNumber').textContent = lastGuess.secret_number;
+                    
+                    // Display guess time if available
+                    if (this.lastGuessTime > 0) {
+                        document.getElementById('guessTime').textContent = this.lastGuessTime.toFixed(1) + 's';
+                    }
+                    
                     document.getElementById('outcome').textContent = lastGuess.is_correct ? '✓ Correct!' : '✗ Wrong number';
                     document.getElementById('result').classList.remove('hidden');
                     this.lastGuessDisplayed = guessNum;
                     
-                    // Hide result after 2 seconds
+                    // Hide result after 4 seconds (increased from 2s)
                     setTimeout(() => {
                         document.getElementById('result').classList.add('hidden');
-                    }, 2000);
+                    }, 4000);
                 }
             }
             
@@ -167,6 +220,325 @@ class GameScreen {
         } catch (e) {
             console.error('Failed to load game state:', e);
         }
+    }
+
+    updateDisabledNumbersUI() {
+        // Hide number buttons for disabled numbers
+        if (!this.disabledNumbers || this.disabledNumbers.length === 0) {
+            // No disabled numbers, show all
+            document.querySelectorAll('.number-btn').forEach(btn => {
+                btn.classList.remove('disabled');
+                btn.classList.remove('blast-effect');
+            });
+            return;
+        }
+        
+        // Convert to integers for comparison
+        const disabledInts = this.disabledNumbers.map(n => parseInt(n));
+        
+        let disabledCount = 0;
+        document.querySelectorAll('.number-btn').forEach(btn => {
+            const num = parseInt(btn.dataset.number);
+            if (disabledInts.includes(num)) {
+                // Check if this number wasn't already disabled (new disable)
+                if (!btn.classList.contains('disabled')) {
+                    // Play blast animation and sound
+                    this.playNumberBlastEffect(btn, num);
+                }
+                btn.classList.add('disabled');
+                disabledCount++;
+            } else {
+                btn.classList.remove('disabled');
+                btn.classList.remove('blast-effect');
+            }
+        });
+    }
+
+    playNumberBlastEffect(btn, num) {
+        // Add blast animation class
+        btn.classList.add('blast-effect');
+        
+        // Play sound effect
+        this.playDisabledSound();
+        
+        // Create particle explosion effect
+        const rect = btn.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        // Create 8-12 particles radiating outward
+        const particleCount = 10;
+        for (let i = 0; i < particleCount; i++) {
+            const angle = (i / particleCount) * Math.PI * 2;
+            const distance = 80 + Math.random() * 60;
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance;
+            
+            const particle = document.createElement('div');
+            particle.className = `particle ${Math.random() > 0.5 ? 'spark' : 'dust'}`;
+            particle.style.left = centerX + 'px';
+            particle.style.top = centerY + 'px';
+            particle.style.setProperty('--tx', tx + 'px');
+            particle.style.setProperty('--ty', ty + 'px');
+            
+            document.body.appendChild(particle);
+            
+            // Remove particle after animation
+            setTimeout(() => particle.remove(), 800);
+        }
+    }
+
+    playDisabledSound() {
+        // Create blast sound using Web Audio API
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Create multiple sounds for variety
+            const soundType = Math.floor(Math.random() * 3);
+            
+            if (soundType === 0) {
+                // Explosion pop
+                this.playExplosionSound(audioContext);
+            } else if (soundType === 1) {
+                // Laser zap
+                this.playLaserSound(audioContext);
+            } else {
+                // Woosh blast
+                this.playWooshSound(audioContext);
+            }
+        } catch (e) {
+            // Audio synthesis not available
+        }
+    }
+
+    playExplosionSound(audioContext) {
+        // Explosion: quick freq drop with noise
+        const now = audioContext.currentTime;
+        const duration = 0.3;
+        
+        // Create noise
+        const bufferSize = audioContext.sampleRate * duration;
+        const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        
+        const noise = audioContext.createBufferSource();
+        noise.buffer = buffer;
+        
+        const noiseGain = audioContext.createGain();
+        noiseGain.gain.setValueAtTime(0.3, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+        
+        noise.connect(noiseGain);
+        noiseGain.connect(audioContext.destination);
+        noise.start(now);
+        noise.stop(now + duration);
+    }
+
+    playLaserSound(audioContext) {
+        // Laser: downward frequency sweep
+        const now = audioContext.currentTime;
+        const duration = 0.15;
+        
+        const osc = audioContext.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200, now);
+        osc.frequency.exponentialRampToValueAtTime(400, now + duration);
+        
+        const gain = audioContext.createGain();
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+        
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.start(now);
+        osc.stop(now + duration);
+    }
+
+    playWooshSound(audioContext) {
+        // Woosh: sweeping noise
+        const now = audioContext.currentTime;
+        const duration = 0.2;
+        
+        const bufferSize = audioContext.sampleRate * duration;
+        const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        
+        const noise = audioContext.createBufferSource();
+        noise.buffer = buffer;
+        
+        // Filter to make it sound like swoosh
+        const filter = audioContext.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.setValueAtTime(200, now);
+        filter.frequency.exponentialRampToValueAtTime(2000, now + duration);
+        
+        const gain = audioContext.createGain();
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + duration);
+        
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        noise.start(now);
+        noise.stop(now + duration);
+    }
+
+    displayCategories(categories) {
+        // Handle new structured format with free and paid groups
+        const freeContainer = document.getElementById('free-categories');
+        const paidContainer = document.getElementById('paid-categories-container');
+        
+        if (!freeContainer || !paidContainer) return;
+        
+        // Clear previous content
+        freeContainer.innerHTML = '';
+        paidContainer.innerHTML = '';
+        
+        // Display free category
+        if (categories.free) {
+            const freeBtn = this.createCategoryButton(categories.free, true);
+            freeContainer.appendChild(freeBtn);
+            
+            // Auto-select free category on load
+            setTimeout(() => {
+                if (!this.selectedCategory) {
+                    freeBtn.click();
+                }
+            }, 100);
+        }
+        
+        // Display paid categories with grouping
+        if (categories.paid && categories.paid.length > 0) {
+            const firstPaid = categories.paid[0];
+            const paidType = firstPaid.type || 'range';
+            
+            // Determine group title and icon
+            let groupTitle = '';
+            if (paidType === 'parity') {
+                groupTitle = '🔢 Parity';
+            } else if (paidType === 'range') {
+                groupTitle = '📊 Ranges';
+            } else {
+                groupTitle = '💎 Options';
+            }
+            
+            // Create paid group container
+            const paidGroup = document.createElement('div');
+            paidGroup.className = 'paid-group';
+            
+            const groupTitleEl = document.createElement('div');
+            groupTitleEl.className = 'group-title';
+            groupTitleEl.textContent = groupTitle;
+            paidGroup.appendChild(groupTitleEl);
+            
+            // Create options grid for paid categories
+            const optionsGrid = document.createElement('div');
+            optionsGrid.className = 'category-options';
+            
+            categories.paid.forEach(category => {
+                const btn = this.createCategoryButton(category, false);
+                optionsGrid.appendChild(btn);
+            });
+            
+            paidGroup.appendChild(optionsGrid);
+            paidContainer.appendChild(paidGroup);
+        }
+    }
+
+    createCategoryButton(category, isFree) {
+        const button = document.createElement('button');
+        button.className = 'category-option';
+        button.setAttribute('data-category', category.name);
+        
+        const label = document.createElement('div');
+        label.className = 'category-option-label';
+        label.textContent = category.label;
+        
+        const description = document.createElement('div');
+        description.className = 'category-option-description';
+        description.textContent = category.description;
+        
+        const cost = document.createElement('div');
+        cost.className = `category-option-cost ${isFree ? 'free' : 'paid'}`;
+        cost.textContent = isFree ? '✓ Free' : `${category.cost} 💎`;
+        
+        button.appendChild(label);
+        button.appendChild(description);
+        button.appendChild(cost);
+        
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.selectCategory(category);
+        });
+        
+        return button;
+    }
+
+    selectCategory(category) {
+        if (!this.isMyTurn || !this.gameStarted) return;
+        
+        // Check if user has enough gems for paid category
+        if (category.cost > 0) {
+            const currentUserGems = this.gameState.current_user_gems || 0;
+            if (currentUserGems < category.cost) {
+                this.showCategoryMessage(`Insufficient gems! Need ${category.cost}, have ${currentUserGems}`, false);
+                return;
+            }
+        }
+        
+        this.selectedCategory = category;
+        
+        // Update UI - highlight selected button
+        document.querySelectorAll('.category-option').forEach(opt => {
+            opt.classList.remove('selected');
+        });
+        
+        // Find and highlight the clicked button
+        const categoryName = category.name;
+        const selectedBtn = document.querySelector(`.category-option[data-category="${categoryName}"]`);
+        if (selectedBtn) {
+            selectedBtn.classList.add('selected');
+        }
+        
+        // Update the selected display at bottom
+        document.getElementById('selectedCategory').textContent = category.label;
+        document.getElementById('categoryFee').textContent = category.cost;
+        
+        // Show success message for paid categories
+        if (category.cost > 0) {
+            this.showCategoryMessage(`Selected ${category.label} - ${category.cost} 💎 will be deducted on submit`, true);
+        } else {
+            this.showCategoryMessage(`Selected ${category.label} - Free choice`, true);
+        }
+        
+        if (this.audioManager) {
+            this.audioManager.playSound('click');
+        }
+    }
+
+    showCategoryMessage(message, isSuccess) {
+        const messageEl = document.getElementById('category-message');
+        if (!messageEl) return;
+        
+        messageEl.textContent = message;
+        messageEl.classList.remove('hidden');
+        if (isSuccess) {
+            messageEl.classList.add('success');
+        } else {
+            messageEl.classList.remove('success');
+        }
+        
+        setTimeout(() => {
+            messageEl.classList.add('hidden');
+        }, 3000);
     }
 
     async updateHistoryTable() {
@@ -205,6 +577,15 @@ class GameScreen {
             }
         } catch (e) {
             console.error('Failed to load history:', e);
+        }
+    }
+
+    clearHistoryTable() {
+        // Clear the history table and reset counter
+        const tbody = document.getElementById('history-body');
+        if (tbody) {
+            tbody.innerHTML = '';
+            this.historyRowCount = 0;
         }
     }
 
@@ -348,16 +729,16 @@ class GameScreen {
         
         this.currentTurnStarted = true;
 
-        let timeRemaining = 10;
+        let timeRemaining = 15;
         const timerDisplay = document.getElementById('turn-time');
-        timerDisplay.textContent = '10s';
+        timerDisplay.textContent = '15s';
         const timerBar = document.getElementById('timerBar');
         if (timerBar) timerBar.style.width = '0%';
 
         const updateTimer = () => {
             if (timeRemaining > 0) {
                 timerDisplay.textContent = `${timeRemaining}s`;
-                const progress = ((10 - timeRemaining) / 10) * 100;
+                const progress = ((15 - timeRemaining) / 15) * 100;
                 if (timerBar) {
                     timerBar.style.width = progress + '%';
                 }
@@ -379,25 +760,44 @@ class GameScreen {
     async autoSubmitGuess() {
         // Submit 0 if no number selected (no random selection)
         const guessNumber = this.selectedNumber ?? 0;
+        const categoryName = this.selectedCategory?.name || '1-20';
 
         try {
             const result = await this.requestManager.postJSON('api/game/guess.php', {
                 room_code: this.roomCode,
-                guess: guessNumber
+                guess: guessNumber,
+                category: categoryName
             });
 
             if (result.success) {
                 // Show result with guessed number and real number
                 document.getElementById('guessedNumber').textContent = result.guess.guessed_number;
                 document.getElementById('realNumber').textContent = result.guess.secret_number;
-                document.getElementById('outcome').textContent = result.guess.is_correct ? '✓ Correct!' : '✗ Wrong number';
+                
+                let outcomeText = result.guess.is_correct ? '✓ Correct!' : '✗ Wrong number';
+                if (result.guess.category_cost > 0) {
+                    outcomeText += ` (${result.guess.gem_reward > 0 ? '+' : ''}${result.guess.gem_reward - result.guess.category_cost} 💎)`;
+                }
+                document.getElementById('outcome').textContent = outcomeText;
                 document.getElementById('result').classList.remove('hidden');
 
-                // Award gems if correct
-                if (result.guess.is_correct) {
-                    const myId = parseInt(window.currentUser.id);
-                    this.playerGems[myId] = (this.playerGems[myId] || 0) + 10;
-                    this.showGemNotification(10);
+                // Update gems and show notification
+                if (result.guess.category_cost > 0) {
+                    const netGems = result.guess.gem_reward - result.guess.category_cost;
+                    this.showGemNotification(netGems, true);
+                } else if (result.guess.gem_reward > 0) {
+                    this.showGemNotification(result.guess.gem_reward);
+                } else if (result.guess.category_cost > 0) {
+                    this.showGemNotification(-result.guess.category_cost);
+                }
+
+                // Update player gems
+                const myId = parseInt(window.currentUser.id);
+                this.playerGems[myId] = result.guess.gems_balance || (this.playerGems[myId] || 0);
+                
+                // Update top bar gems display in real-time
+                if (window.updateTopBarGems) {
+                    window.updateTopBarGems();
                 }
 
                 if (this.audioManager) {
@@ -411,8 +811,11 @@ class GameScreen {
                 setTimeout(() => {
                     document.getElementById('result').classList.add('hidden');
                     this.selectedNumber = null;
+                    this.selectedCategory = null;  // Reset category for next turn
                     document.querySelectorAll('.number-btn').forEach(btn => btn.classList.remove('active'));
                     document.getElementById('selectedNumber').textContent = '—';
+                    document.getElementById('selectedCategory').textContent = '—';
+                    document.getElementById('categoryFee').textContent = '—';
                     
                     // Poll for state update
                     this.loadGameState();
@@ -425,6 +828,19 @@ class GameScreen {
 
     selectNumber(num) {
         if (!this.isMyTurn || !this.gameStarted) return;
+
+        // Check if number is disabled (convert to int for comparison)
+        const disabledInts = this.disabledNumbers.map(n => parseInt(n));
+        if (disabledInts.includes(parseInt(num))) {
+            this.showCategoryMessage(`Number ${num} is disabled in this difficulty level`, false);
+            return;
+        }
+
+        // Require category selection first
+        if (!this.selectedCategory) {
+            this.showCategoryMessage('Please select a category first', false);
+            return;
+        }
 
         this.selectedNumber = num;
         document.querySelectorAll('.number-btn').forEach(btn => {
@@ -521,6 +937,11 @@ class GameScreen {
         if (this.pollingInterval) clearInterval(this.pollingInterval);
         if (this.gameTimer) clearTimeout(this.gameTimer);
 
+        // Save last game code for history access
+        if (this.roomCode) {
+            localStorage.setItem('lastGameCode', this.roomCode);
+        }
+
         // Complete the game in database
         try {
             await this.requestManager.postJSON('api/game/complete.php', {
@@ -548,6 +969,9 @@ class GameScreen {
         });
         document.getElementById('submitBtn').disabled = true;  // Always disabled - auto-submit only
         
+        // Re-apply disabled numbers UI after enabling/disabling
+        this.updateDisabledNumbersUI();
+        
         if (enable) {
             playArea.classList.remove('hidden');
         } else {
@@ -555,10 +979,12 @@ class GameScreen {
         }
     }
 
-    showGemNotification(gems) {
+    showGemNotification(gems, isCategoryPayment = false) {
         const notification = document.createElement('div');
         notification.className = 'gem-notification';
-        notification.innerHTML = `<span>+${gems} 💎</span>`;
+        const sign = gems >= 0 ? '+' : '';
+        const color = gems >= 0 ? 'success' : 'error';
+        notification.innerHTML = `<span class="gem-notif-${color}">${sign}${gems} 💎</span>`;
         document.body.appendChild(notification);
 
         // Trigger animation
