@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Purple Guess — Multiplayer</title>
-    <link rel="stylesheet" href="assets/style.css?v=1.3">
+    <link rel="stylesheet" href="assets/style.css?v=2.0">
     <script src="assets/translations.js?v=1.1"></script>
 </head>
 <body>
@@ -38,7 +38,7 @@
 
                     <!-- Login Form -->
                     <form id="login-form" class="auth-form active">
-                        <input type="text" id="login-username" data-i18n-placeholder="login.username" placeholder="Username" required>
+                        <input type="text" id="login-username" autocomplete="username" data-i18n-placeholder="login.username" placeholder="Username" required>
                         <input type="password" id="login-password" autocomplete="current-password" data-i18n-placeholder="login.password" placeholder="Password" required>
                         <button type="submit" class="btn primary full-width" data-i18n="login.button">Login</button>
                         <div id="login-error" class="error-message"></div>
@@ -46,7 +46,7 @@
 
                     <!-- Register Form -->
                     <form id="register-form" class="auth-form">
-                        <input type="text" id="register-username" data-i18n-placeholder="register.username" placeholder="Username (3+ chars)" required>
+                        <input type="text" id="register-username" autocomplete="username" data-i18n-placeholder="register.username" placeholder="Username (3+ chars)" required>
                         <input type="password" id="register-password" autocomplete="new-password" data-i18n-placeholder="register.password" placeholder="Password (6+ chars)" required>
                         <button type="submit" class="btn primary full-width" data-i18n="register.button">Register</button>
                         <div id="register-error" class="error-message"></div>
@@ -392,22 +392,22 @@
             </header>
 
             <section class="card">
-                <div id="history-empty" style="text-align: center; padding: 40px; color: var(--text-secondary); display: none !important;">
+                <div id="history-empty" style="display: none;">
                     No games yet. Play your first game!
                 </div>
-                <div class="history-container" id="history-container" style="display: block !important; background: rgba(0, 255, 0, 0.3) !important; border: 3px solid lime !important; min-height: 200px !important;">
-                    <table class="history-table">
+                <div id="history-container" style="display: block; border: 1px solid #ccc; padding: 10px; width: 100%; box-sizing: border-box; min-height: 150px; height: auto;">
+                    <table id="history-table" class="history-table" style="width: 100%; border-collapse: collapse;">
                         <thead>
-                            <tr>
-                                <th style="width: 15%;">Date</th>
-                                <th style="width: 20%;">Opponents</th>
-                                <th style="width: 10%;">Your Score</th>
-                                <th style="width: 15%;">Opponent Score</th>
-                                <th style="width: 10%;">Result</th>
-                                <th style="width: 15%;">Action</th>
+                            <tr style="background: #333;">
+                                <th style="border: 1px solid #666; padding: 8px; text-align: left;">Date</th>
+                                <th style="border: 1px solid #666; padding: 8px; text-align: left;">Opponents</th>
+                                <th style="border: 1px solid #666; padding: 8px; text-align: left;">Your Score</th>
+                                <th style="border: 1px solid #666; padding: 8px; text-align: left;">Opponent Score</th>
+                                <th style="border: 1px solid #666; padding: 8px; text-align: left;">Result</th>
+                                <th style="border: 1px solid #666; padding: 8px; text-align: left;">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="history-body">
+                        <tbody id="history-body" style="display: table-row-group; width: 100%;">
                         </tbody>
                     </table>
                 </div>
@@ -470,13 +470,13 @@
     </div>
 
     <!-- Scripts -->
-    <script src="assets/app.js?v=1.4"></script>
-    <script src="assets/screens/router.js?v=1.3"></script>
-    <script src="assets/screens/auth.js?v=1.3"></script>
-    <script src="assets/screens/lobby.js?v=1.3"></script>
-    <script src="assets/screens/game.js?v=1.3"></script>
-    <script src="assets/screens/results.js?v=1.3"></script>
-    <script src="assets/screens/history.js?v=1.3"></script>
-    <script src="assets/screens/leaderboard.js?v=1.3"></script>
+    <script src="assets/app.js?v=1.5"></script>
+    <script src="assets/screens/router.js?v=1.5"></script>
+    <script src="assets/screens/auth.js?v=1.5"></script>
+    <script src="assets/screens/lobby.js?v=1.5"></script>
+    <script src="assets/screens/game.js?v=1.5"></script>
+    <script src="assets/screens/results.js?v=1.5"></script>
+    <script src="assets/screens/history.js?v=1.5"></script>
+    <script src="assets/screens/leaderboard.js?v=1.5"></script>
 </body>
 </html>

@@ -74,6 +74,7 @@ class HistoryScreen {
         games.forEach((game, index) => {
             console.log('[History] Creating row for game', index, ':', game);
             const row = document.createElement('tr');
+            row.style.display = 'table-row';
             
             // Format date
             const date = new Date(game.date);
@@ -91,12 +92,12 @@ class HistoryScreen {
             const oppScore = `${game.opponent_correct}/${game.opponent_correct + game.opponent_incorrect}`;
             
             row.innerHTML = `
-                <td>${dateStr}</td>
-                <td>${game.players}</td>
-                <td>${userScore}</td>
-                <td>${oppScore}</td>
-                <td class="${resultColor}">${game.result}</td>
-                <td><button class="btn small secondary view-details-btn" data-room-code="${game.room_code}">View Details</button></td>
+                <td style="display: table-cell;">${dateStr}</td>
+                <td style="display: table-cell;">${game.players}</td>
+                <td style="display: table-cell;">${userScore}</td>
+                <td style="display: table-cell;">${oppScore}</td>
+                <td class="${resultColor}" style="display: table-cell;">${game.result}</td>
+                <td style="display: table-cell;"><button class="btn small secondary view-details-btn" data-room-code="${game.room_code}">View Details</button></td>
             `;
             
             console.log('[History] Appending row to tbody');
