@@ -227,30 +227,43 @@ function updateTopBarGems() {
   const gemsDisplay = document.getElementById('top-gems-display');
   if (!gemsDisplay) return;
   
+  // Don't poll gems on login screen
+  const loginScreen = document.getElementById('login-screen');
+  if (loginScreen) {
+    const computedStyle = window.getComputedStyle(loginScreen);
+    const isLoginScreenVisible = computedStyle.display !== 'none';
+    if (isLoginScreenVisible) {
+      console.log('[Gems] Login screen is visible, skipping gems poll');
+      return; // Skip polling on login screen
+    }
+  }
+  
   // Fetch real gems from database
   fetch('api/user/gems.php')
     .then(res => {
       // Handle 401 (unauthorized/invalid session)
       if (res.status === 401) {
-        // Session invalid, redirect to login
-        console.warn('Session invalid, redirecting to login');
-        window.location.href = '/';
-        throw new Error('Session invalid');
+        console.log('[Gems] Not authenticated (401), showing 0 gems');
+        gemsDisplay.textContent = '💎 0';
+        gemsDisplay.style.display = 'inline-block';
+        return null;
       }
       return res.json();
     })
     .then(data => {
+      if (!data) return; // Skip if 401
       if (data.success) {
+        console.log('[Gems] Fetched gems:', data.gems);
         gemsDisplay.textContent = `💎 ${data.gems}`;
         gemsDisplay.style.display = 'inline-block';
       } else {
-        // Show 0 gems if error or user not found
+        console.log('[Gems] API returned false, showing 0');
         gemsDisplay.textContent = '💎 0';
         gemsDisplay.style.display = 'inline-block';
       }
     })
     .catch(err => {
-      console.error('postJSON error:', err.message, ' in gems fetch');
+      console.error('[Gems] Fetch error:', err.message);
       gemsDisplay.textContent = '💎 0';
       gemsDisplay.style.display = 'inline-block';
     });

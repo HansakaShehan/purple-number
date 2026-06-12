@@ -103,10 +103,7 @@ class HistoryScreen {
             tbody.appendChild(row);
             console.log('[History] Row appended. Current tbody innerHTML length:', tbody.innerHTML.length);
             console.log('[History] tbody children count:', tbody.children.length);
-        });
-        
-        console.log('[History] Final tbody innerHTML:', tbody.innerHTML.substring(0, 300));
-        console.log('[History] ===== displayHistory END =====' );
+            
             // Add click handler to view details button
             const viewBtn = row.querySelector('.view-details-btn');
             viewBtn.addEventListener('click', () => {
@@ -115,6 +112,9 @@ class HistoryScreen {
                 window.router.goToResults();
             });
         });
+        
+        console.log('[History] Final tbody innerHTML:', tbody.innerHTML.substring(0, 300));
+        console.log('[History] ===== displayHistory END =====' );
     }
 }
 

@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Purple Guess — Multiplayer</title>
-    <link rel="stylesheet" href="assets/style.css?v=1.2">
+    <link rel="stylesheet" href="assets/style.css?v=1.3">
     <script src="assets/translations.js?v=1.1"></script>
 </head>
 <body>
@@ -39,7 +39,7 @@
                     <!-- Login Form -->
                     <form id="login-form" class="auth-form active">
                         <input type="text" id="login-username" data-i18n-placeholder="login.username" placeholder="Username" required>
-                        <input type="password" id="login-password" data-i18n-placeholder="login.password" placeholder="Password" required>
+                        <input type="password" id="login-password" autocomplete="current-password" data-i18n-placeholder="login.password" placeholder="Password" required>
                         <button type="submit" class="btn primary full-width" data-i18n="login.button">Login</button>
                         <div id="login-error" class="error-message"></div>
                     </form>
@@ -47,7 +47,7 @@
                     <!-- Register Form -->
                     <form id="register-form" class="auth-form">
                         <input type="text" id="register-username" data-i18n-placeholder="register.username" placeholder="Username (3+ chars)" required>
-                        <input type="password" id="register-password" data-i18n-placeholder="register.password" placeholder="Password (6+ chars)" required>
+                        <input type="password" id="register-password" autocomplete="new-password" data-i18n-placeholder="register.password" placeholder="Password (6+ chars)" required>
                         <button type="submit" class="btn primary full-width" data-i18n="register.button">Register</button>
                         <div id="register-error" class="error-message"></div>
                     </form>
@@ -470,13 +470,13 @@
     </div>
 
     <!-- Scripts -->
-    <script src="assets/app.js?v=1.2"></script>
-    <script src="assets/screens/router.js?v=1.2"></script>
-    <script src="assets/screens/auth.js?v=1.2"></script>
-    <script src="assets/screens/lobby.js?v=1.2"></script>
-    <script src="assets/screens/game.js?v=1.2"></script>
-    <script src="assets/screens/results.js?v=1.2"></script>
-    <script src="assets/screens/history.js?v=1.2"></script>
-    <script src="assets/screens/leaderboard.js?v=1.2"></script>
+    <script src="assets/app.js?v=1.4"></script>
+    <script src="assets/screens/router.js?v=1.3"></script>
+    <script src="assets/screens/auth.js?v=1.3"></script>
+    <script src="assets/screens/lobby.js?v=1.3"></script>
+    <script src="assets/screens/game.js?v=1.3"></script>
+    <script src="assets/screens/results.js?v=1.3"></script>
+    <script src="assets/screens/history.js?v=1.3"></script>
+    <script src="assets/screens/leaderboard.js?v=1.3"></script>
 </body>
 </html>
