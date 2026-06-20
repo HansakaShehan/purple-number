@@ -26,6 +26,8 @@ const translations = {
     'lobby.joinError': 'Failed to join room',
     'lobby.admin': '⚙️ Admin Settings',
     'lobby.rounds': 'Rounds (5-100)',
+    'lobby.gemCategories': 'Gem Categories',
+    'lobby.gemCategoriesHint': 'Uncheck a category to disable it in all games.',
     'lobby.save': 'Save Settings',
     'lobby.leaderboard': '🏆 Leaderboard',
     'lobby.logout': 'Logout',

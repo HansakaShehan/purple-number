@@ -143,7 +143,7 @@ try {
                 'secret_number' => (int)$lastGuess['secret_number'],
                 'is_correct' => (int)$lastGuess['is_correct'],
                 'player_id' => (int)$lastGuess['player_id'],
-                'selected_category' => $lastGuess['selected_category'] ?? '1-20',
+                'selected_category' => $lastGuess['selected_category'] ?? '1-10',
                 'category_cost' => (int)($lastGuess['category_cost'] ?? 0)
             ] : null,
             'current_user_gems' => (int)$currentUserGems,
@@ -156,7 +156,7 @@ try {
                     'guessed_number' => (int)$guess['guessed_number'],
                     'secret_number' => (int)$guess['secret_number'],
                     'is_correct' => (int)$guess['is_correct'],
-                    'selected_category' => $guess['selected_category'] ?? '1-20',
+                    'selected_category' => $guess['selected_category'] ?? '1-10',
                     'category_cost' => (int)($guess['category_cost'] ?? 0),
                     'created_at' => $guess['created_at']
                 ];

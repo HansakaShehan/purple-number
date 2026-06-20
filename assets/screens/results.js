@@ -2,16 +2,21 @@
 class ResultsScreen {
     constructor() {
         this.requestManager = window.requestManager;
+        this.resultsLoaded = false;
         this.setupEventListeners();
     }
 
     setupEventListeners() {
         document.getElementById('play-again-btn').addEventListener('click', () => {
+            // Reset flag when leaving results screen
+            this.resultsLoaded = false;
             window.lobbyScreen.clearForms();
             window.router.goToLobby();
         });
 
         document.getElementById('lobby-btn').addEventListener('click', () => {
+            // Reset flag when leaving results screen
+            this.resultsLoaded = false;
             window.lobbyScreen.clearForms();
             window.router.goToLobby();
         });
@@ -20,12 +25,15 @@ class ResultsScreen {
         window.addEventListener('screen-changed', (e) => {
             if (e.detail.screen === 'results') {
                 this.onScreenEnter();
+            } else if (e.detail.screen !== 'results') {
+                // Reset flag when leaving results screen
+                this.resultsLoaded = false;
             }
         });
     }
 
     async onScreenEnter() {
-        // Load final game state
+        // Load final game state (only once per screen entry)
         let roomCode = window.gameScreen?.roomCode;
         
         // If no current game, try to load from localStorage
@@ -33,12 +41,19 @@ class ResultsScreen {
             roomCode = localStorage.getItem('lastGameCode');
         }
         
-        if (roomCode) {
+        if (roomCode && !this.resultsLoaded) {
             await this.displayResults(roomCode);
         }
     }
 
     async displayResults(roomCode) {
+        // Guard: only load once per screen entry to prevent loops
+        if (this.resultsLoaded) {
+            console.log('[Results] Already loaded, skipping duplicate load');
+            return;
+        }
+        this.resultsLoaded = true;
+
         try {
             const result = await this.requestManager.postJSON('api/game/state.php', {
                 room_code: roomCode
@@ -78,19 +93,6 @@ class ResultsScreen {
             // Display gem totals
             document.getElementById('result-p1-gems').textContent = p1Gems.netGems;
             document.getElementById('result-p2-gems').textContent = p2Gems.netGems;
-
-            // Display gem breakdown
-            this.displayGemBreakdown(p1.username, 'p1', p1Gems);
-            this.displayGemBreakdown(p2.username, 'p2', p2Gems);
-
-            // Show the gem breakdown section
-            const breakdownSection = document.getElementById('gem-breakdown');
-            if (breakdownSection) {
-                breakdownSection.classList.remove('hidden');
-            }
-
-            // Display game history
-            this.displayGameHistory(game.all_guesses || [], p1.username, p2.username, game.players);
         } catch (e) {
             console.error('Failed to display results:', e);
         }

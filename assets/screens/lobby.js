@@ -55,20 +55,65 @@ class LobbyScreen {
 
     async loadAdminConfig() {
         try {
-            const result = await this.requestManager.postJSON('api/admin/config.php');
+            const res = await fetch('api/admin/config.php');
+            const result = await res.json();
+            if (!res.ok) {
+                throw result;
+            }
+
             document.getElementById('rounds-count-input').value = result.config.rounds_count;
+            this.renderGemCategoryConfig(result.config);
         } catch (e) {
             console.error('Failed to load admin config:', e);
         }
     }
 
+    renderGemCategoryConfig(config) {
+        const container = document.getElementById('gem-categories-config');
+        if (!container) return;
+
+        const categories = config.gem_categories || [];
+        const disabled = new Set(config.disabled_gem_categories || []);
+
+        container.innerHTML = '';
+
+        categories.forEach(category => {
+            const label = document.createElement('label');
+            label.className = 'admin-category-option';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = category.name;
+            checkbox.checked = !disabled.has(category.name);
+
+            const text = document.createElement('span');
+            text.textContent = `${category.label} (${category.description})`;
+
+            label.appendChild(checkbox);
+            label.appendChild(text);
+            container.appendChild(label);
+        });
+    }
+
+    getDisabledGemCategoriesFromUI() {
+        const disabled = [];
+        document.querySelectorAll('#gem-categories-config input[type="checkbox"]').forEach(checkbox => {
+            if (!checkbox.checked) {
+                disabled.push(checkbox.value);
+            }
+        });
+        return disabled;
+    }
+
     async saveConfig() {
         const roundsCount = parseInt(document.getElementById('rounds-count-input').value);
+        const disabledGemCategories = this.getDisabledGemCategoriesFromUI();
         const msgEl = document.getElementById('admin-message');
 
         try {
             await this.requestManager.postJSON('api/admin/config.php', {
-                rounds_count: roundsCount
+                rounds_count: roundsCount,
+                disabled_gem_categories: disabledGemCategories
             });
             msgEl.textContent = '✓ Settings saved!';
             msgEl.classList.add('success');

@@ -7,20 +7,21 @@
 // Load environment variables from .env file
 if (file_exists(__DIR__ . '/.env')) {
     $envFile = file(__DIR__ . '/.env');
+
     foreach ($envFile as $line) {
         $line = trim($line);
-        
+
         // Skip empty lines and comments
         if (empty($line) || strpos($line, '#') === 0) {
             continue;
         }
-        
+
         // Parse KEY=VALUE format
         if (strpos($line, '=') !== false) {
             list($key, $value) = explode('=', $line, 2);
             $key = trim($key);
             $value = trim($value);
-            
+
             // Set as environment variable
             putenv("$key=$value");
         }
