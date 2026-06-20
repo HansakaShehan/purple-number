@@ -77,6 +77,7 @@ class Database {
                 id INT PRIMARY KEY,
                 rounds_count INT DEFAULT 20,
                 turn_duration_seconds INT DEFAULT 10,
+                disabled_gem_categories JSON DEFAULT NULL,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -175,6 +176,16 @@ class Database {
             $this->pdo->exec("UPDATE game_sessions SET round_disabled_at = 0 WHERE round_disabled_at = 999");
         } catch (PDOException $e) {
             // Might fail if column doesn't exist yet, silently continue
+        }
+
+        // Add disabled_gem_categories column to admin_config if it doesn't exist
+        $result = $this->pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '{$this->database}' AND TABLE_NAME = 'admin_config' AND COLUMN_NAME = 'disabled_gem_categories'");
+        if (!($result && $result->fetch())) {
+            try {
+                $this->pdo->exec("ALTER TABLE admin_config ADD COLUMN disabled_gem_categories JSON DEFAULT NULL AFTER turn_duration_seconds");
+            } catch (PDOException $e) {
+                // Column might already exist or other issue - silently continue
+            }
         }
     }
 }

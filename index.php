@@ -90,6 +90,9 @@
                         <h2>⚙️ <span data-i18n="lobby.admin">Admin Settings</span></h2>
                         <label data-i18n="lobby.rounds">Total Rounds (5-100)</label>
                         <input type="number" id="rounds-count-input" min="5" max="100" value="20">
+                        <label data-i18n="lobby.gemCategories">Gem Categories</label>
+                        <p class="muted" data-i18n="lobby.gemCategoriesHint">Uncheck a category to disable it in all games.</p>
+                        <div id="gem-categories-config" class="admin-category-list"></div>
                         <button id="save-config-btn" class="btn primary" data-i18n="lobby.save">Save Settings</button>
                         <div id="admin-message" class="message"></div>
                     </div>
@@ -184,7 +187,7 @@
                         <div id="category-message" class="category-message hidden"></div>
                     </div>
 
-                    <!-- Number Grid (1-20) -->
+                    <!-- Number Grid (1-10) -->
                     <div class="number-grid" id="number-grid">
                         <button class="number-btn" data-number="1">1</button>
                         <button class="number-btn" data-number="2">2</button>
@@ -196,16 +199,6 @@
                         <button class="number-btn" data-number="8">8</button>
                         <button class="number-btn" data-number="9">9</button>
                         <button class="number-btn" data-number="10">10</button>
-                        <button class="number-btn" data-number="11">11</button>
-                        <button class="number-btn" data-number="12">12</button>
-                        <button class="number-btn" data-number="13">13</button>
-                        <button class="number-btn" data-number="14">14</button>
-                        <button class="number-btn" data-number="15">15</button>
-                        <button class="number-btn" data-number="16">16</button>
-                        <button class="number-btn" data-number="17">17</button>
-                        <button class="number-btn" data-number="18">18</button>
-                        <button class="number-btn" data-number="19">19</button>
-                        <button class="number-btn" data-number="20">20</button>
                     </div>
                     <button id="submitBtn" class="btn" disabled>Send Guess</button>
                 </div>
@@ -231,9 +224,9 @@
                             <tr>
                                 <th>Round</th>
                                 <th>Player</th>
-                                <th>Guess</th>
-                                <th>Real #</th>
-                                <th>Result</th>
+                                <th>FREE (1-10)</th>
+                                <th>GEM Category</th>
+                                <th>Secret</th>
                             </tr>
                         </thead>
                         <tbody id="history-body">
@@ -244,6 +237,11 @@
 
             <footer class="footer">Developed by HanSakaSheHan ❤️</footer>
         </main>
+
+        <!-- HINT POPUP -->
+        <div id="hint-popup" class="hint-popup hidden">
+            <div id="hint-icon" class="hint-icon">🍬</div>
+        </div>
 
         <!-- BOTTOM BAR -->
         <footer class="bottom-bar">
@@ -304,76 +302,7 @@
                     </div>
                 </div>
 
-                <!-- Gem Breakdown Section -->
-                <div id="gem-breakdown" class="gem-breakdown-section hidden">
-                    <h3>💎 Gem Breakdown</h3>
-                    <div class="breakdown-grid">
-                        <div id="p1-breakdown" class="breakdown-box">
-                            <h4 id="p1-breakdown-name">Player 1</h4>
-                            <div class="breakdown-items">
-                                <div class="breakdown-item">
-                                    <span class="label">Free Category Wins:</span>
-                                    <span id="p1-free-wins">0</span> × 10 = <span id="p1-free-total">0</span>
-                                </div>
-                                <div class="breakdown-item">
-                                    <span class="label">Paid Category Wins:</span>
-                                    <span id="p1-paid-wins">0</span> × 20 = <span id="p1-paid-rewards">0</span>
-                                </div>
-                                <div class="breakdown-item">
-                                    <span class="label">Paid Category Costs:</span>
-                                    <span id="p1-paid-used">0</span> × 10 = <span id="p1-paid-costs">0</span>
-                                </div>
-                                <div class="breakdown-item total">
-                                    <span class="label">Net Gems:</span>
-                                    <span id="p1-net-gems">0</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="p2-breakdown" class="breakdown-box">
-                            <h4 id="p2-breakdown-name">Player 2</h4>
-                            <div class="breakdown-items">
-                                <div class="breakdown-item">
-                                    <span class="label">Free Category Wins:</span>
-                                    <span id="p2-free-wins">0</span> × 10 = <span id="p2-free-total">0</span>
-                                </div>
-                                <div class="breakdown-item">
-                                    <span class="label">Paid Category Wins:</span>
-                                    <span id="p2-paid-wins">0</span> × 20 = <span id="p2-paid-rewards">0</span>
-                                </div>
-                                <div class="breakdown-item">
-                                    <span class="label">Paid Category Costs:</span>
-                                    <span id="p2-paid-used">0</span> × 10 = <span id="p2-paid-costs">0</span>
-                                </div>
-                                <div class="breakdown-item total">
-                                    <span class="label">Net Gems:</span>
-                                    <span id="p2-net-gems">0</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Game History Section -->
-                <div id="game-history" class="game-history-section">
-                    <h3>📋 Game History</h3>
-                    <div class="history-table-container">
-                        <table class="history-table">
-                            <thead>
-                                <tr>
-                                    <th>Round</th>
-                                    <th>Player</th>
-                                    <th>Guess</th>
-                                    <th>Answer</th>
-                                    <th>Result</th>
-                                    <th>Category</th>
-                                    <th>Gem Change</th>
-                                </tr>
-                            </thead>
-                            <tbody id="game-history-body">
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
 
                 <div class="results-actions">
                     <button id="play-again-btn" class="btn primary">Play Again</button>

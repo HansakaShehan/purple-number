@@ -556,6 +556,36 @@ body {
     font-weight: 700;
 }
 
+.admin-category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 12px 0 20px;
+}
+
+.admin-category-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-transform: none;
+    letter-spacing: normal;
+    cursor: pointer;
+}
+
+.admin-category-option input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
 /* ===== GAME SCREEN STYLES ===== */
 .game-card {
     background: linear-gradient(135deg, rgba(107, 79, 216, 0.08), rgba(93, 173, 226, 0.04));
@@ -1390,6 +1420,62 @@ body {
     color: var(--text-secondary);
 }
 
+/* ===== HINT POPUP ===== */
+.hint-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.hint-popup.hidden {
+    display: none;
+    opacity: 0;
+}
+
+.hint-popup.show {
+    animation: hintPop 4s ease-out forwards;
+}
+
+.hint-icon {
+    font-size: 5rem;
+    filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.5));
+    animation: hintBounce 4s ease-out forwards;
+}
+
+@keyframes hintPop {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.2);
+    }
+    10% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    85% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+}
+
+@keyframes hintBounce {
+    0% {
+        transform: scale(0.5);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
 /* ===== UTILITY CLASSES ===== */
 .hidden {
     display: none !important;
@@ -1556,6 +1642,180 @@ body {
 #leaderboard-screen .hero {
     padding: 40px 20px;
     margin-bottom: 20px;
+}
+
+/* ===== HINT ANIMATIONS ===== */
+
+/* Hint overlay container */
+#hint-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    visibility: hidden;
+    z-index: 500;
+    pointer-events: none;
+    background: transparent;
+}
+
+#hint-overlay.active {
+    visibility: visible;
+}
+
+/* Rain animation (for even hint) */
+#rain-hint {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    opacity: 0;
+    z-index: 500;
+}
+
+#rain-hint.show {
+    animation: rainFall 5s ease-out forwards;
+}
+
+@keyframes rainFall {
+    0% {
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+.rain-drop {
+    position: absolute;
+    width: 5px;
+    height: 25px;
+    background: linear-gradient(to bottom, rgba(93, 173, 226, 1), rgba(93, 173, 226, 0.6));
+    opacity: 0.95;
+    border-radius: 3px;
+    box-shadow: 0 0 10px rgba(93, 173, 226, 1);
+    filter: drop-shadow(0 0 5px rgba(93, 173, 226, 0.8));
+    animation: dropFall linear;
+    z-index: 500;
+}
+
+@keyframes dropFall {
+    0% {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    5% {
+        opacity: 1;
+    }
+    95% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(100vh);
+    }
+}
+
+/* Hearts animation (for odd hint) */
+#hearts-hint {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    opacity: 0;
+    z-index: 500;
+}
+
+#hearts-hint.show {
+    animation: heartsGlow 5s ease-out forwards;
+}
+
+@keyframes heartsGlow {
+    0% {
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+.heart {
+    position: fixed;
+    font-size: 4rem;
+    opacity: 0.8;
+    filter: drop-shadow(0 0 12px rgba(245, 101, 101, 0.9));
+    animation: heartFloat 5s ease-out forwards;
+    z-index: 500;
+}
+
+@keyframes heartFloat {
+    0% {
+        transform: translateY(100vh) translateX(0) scale(0.3);
+        opacity: 0;
+    }
+    10% {
+        opacity: 1;
+    }
+    90% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-100vh) translateX(50px) scale(1);
+        opacity: 0;
+    }
+}
+
+/* Hint text overlay */
+.hint-text {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3.5rem;
+    font-weight: bold;
+    text-align: center;
+    color: var(--text-primary);
+    z-index: 500;
+    text-shadow: 0 0 30px rgba(107, 79, 216, 0.8), 0 0 50px rgba(107, 79, 216, 0.5);
+    animation: hintTextPulse 5s ease-out forwards;
+    white-space: nowrap;
+}
+
+@keyframes hintTextPulse {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+    10% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    90% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+}
     overflow: hidden;
     background: linear-gradient(135deg, rgba(20, 10, 40, 0.9) 0%, rgba(30, 20, 50, 0.9) 100%), 
                 url('images/leaderboeard-background.avif') center/cover no-repeat;
