@@ -34,12 +34,14 @@ try {
         exit;
     }
 
-    // Get all guesses for this session with player names
+    // Get all guesses for this session with player names and category info
     $guessesStmt = $db->prepare('
         SELECT 
             g.guessed_number,
             g.secret_number,
             g.is_correct,
+            g.selected_category,
+            g.category_cost,
             u.username,
             g.created_at
         FROM guesses g
@@ -50,7 +52,7 @@ try {
     $guessesStmt->execute([$room['id']]);
     $guesses = $guessesStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Format guesses with round numbers
+    // Format guesses with round numbers and category info
     $history = [];
     foreach ($guesses as $index => $guess) {
         $history[] = [
@@ -59,6 +61,8 @@ try {
             'guessed_number' => (int)$guess['guessed_number'],
             'secret_number' => (int)$guess['secret_number'],
             'is_correct' => (int)$guess['is_correct'],
+            'selected_category' => $guess['selected_category'] ?? '1-10',
+            'category_cost' => (int)($guess['category_cost'] ?? 0),
             'created_at' => $guess['created_at']
         ];
     }

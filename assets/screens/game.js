@@ -21,6 +21,7 @@ class GameScreen {
         this.lastTrackedGuessCount = 0;  // Track last guess count for round timing
         this.historyRowCount = 0;  // Track history rows to avoid duplicates
         this.playerGems = {};  // Track gems for each player
+        this.lastHintRoundShown = 0;  // Track which round hint was shown
         window.gameScreen = this;  // Store reference globally for gem tracking
         this.setupEventListeners();
     }
@@ -222,6 +223,141 @@ class GameScreen {
         }
     }
 
+    async checkAndDisplayHint() {
+        // Only show hint if it's MY turn
+        if (!this.isMyTurn) {
+            return;
+        }
+        
+        // Check if this round should have a hint
+        try {
+            const response = await fetch('api/game/hint.php?room_code=' + this.roomCode);
+            const result = await response.json();
+            
+            // Only show hint once per round PER PLAYER
+            if (result.success && result.hint && result.current_round > this.lastHintRoundShown) {
+                this.lastHintRoundShown = result.current_round;
+                this.displayHintAnimation(result.hint);
+            }
+        } catch (e) {
+            console.error('[Hint] Error fetching hint:', e);
+        }
+    }
+
+    displayHintAnimation(hint) {
+        const hintOverlay = document.getElementById('hint-overlay');
+        const rainHint = document.getElementById('rain-hint');
+        const heartsHint = document.getElementById('hearts-hint');
+        
+        if (!hintOverlay) {
+            console.error('[Hint] hint-overlay element not found');
+            return;
+        }
+        
+        if (!rainHint || !heartsHint) {
+            console.error('[Hint] rain-hint or hearts-hint element not found');
+            return;
+        }
+        
+        // Clear previous animations
+        rainHint.classList.remove('show');
+        heartsHint.classList.remove('show');
+        hintOverlay.classList.remove('active');
+        
+        // Force reflow to reset animations
+        void hintOverlay.offsetWidth;
+        
+        // Display appropriate animation
+        if (hint.type === 'even') {
+            // Rain animation
+            this.generateRaindrops();
+            hintOverlay.classList.add('active');
+            // Small delay to ensure animation triggers
+            setTimeout(() => {
+                rainHint.classList.add('show');
+            }, 10);
+        } else if (hint.type === 'odd') {
+            // Hearts animation
+            this.generateHearts();
+            hintOverlay.classList.add('active');
+            // Small delay to ensure animation triggers
+            setTimeout(() => {
+                heartsHint.classList.add('show');
+            }, 10);
+        }
+        
+        // Hide after 5 seconds
+        setTimeout(() => {
+            hintOverlay.classList.remove('active');
+            rainHint.classList.remove('show');
+            heartsHint.classList.remove('show');
+        }, 5000);
+    }
+
+    clearHintAnimation() {
+        // Immediately clear any lingering hint animations
+        const hintOverlay = document.getElementById('hint-overlay');
+        const rainHint = document.getElementById('rain-hint');
+        const heartsHint = document.getElementById('hearts-hint');
+        
+        if (hintOverlay) {
+            hintOverlay.classList.remove('active');
+        }
+        if (rainHint) {
+            rainHint.classList.remove('show');
+        }
+        if (heartsHint) {
+            heartsHint.classList.remove('show');
+        }
+    }
+
+    generateRaindrops() {
+        const rainHint = document.getElementById('rain-hint');
+        
+        // Clear existing raindrops
+        rainHint.querySelectorAll('.rain-drop').forEach(drop => drop.remove());
+        
+        // Generate 40-60 raindrops for full screen coverage
+        const dropCount = Math.floor(Math.random() * 20 + 40);
+        for (let i = 0; i < dropCount; i++) {
+            const drop = document.createElement('div');
+            drop.className = 'rain-drop';
+            drop.style.left = Math.random() * 100 + '%';
+            // Start well above screen
+            drop.style.top = Math.random() * 100 - 100 + 'px';
+            // Duration should be long enough to fall full screen
+            const duration = Math.random() * 2 + 3; // 3-5 seconds
+            drop.style.animationDuration = duration + 's';
+            // Stagger drops falling at different times
+            drop.style.animationDelay = Math.random() * 3 + 's';
+            rainHint.appendChild(drop);
+        }
+    }
+
+    generateHearts() {
+        const heartsHint = document.getElementById('hearts-hint');
+        
+        // Clear existing hearts
+        heartsHint.querySelectorAll('.heart').forEach(heart => heart.remove());
+        
+        // Generate 30-40 hearts for full screen coverage
+        const heartCount = Math.floor(Math.random() * 10 + 30);
+        for (let i = 0; i < heartCount; i++) {
+            const heart = document.createElement('div');
+            heart.className = 'heart';
+            heart.textContent = '💗';
+            heart.style.left = Math.random() * 100 + '%';
+            // Start at bottom and float up
+            heart.style.bottom = Math.random() * 100 - 100 + 'px';
+            // Duration should match full screen float
+            heart.style.animationDuration = (Math.random() * 2 + 3) + 's'; // 3-5 seconds
+            // Stagger hearts at different start times
+            heart.style.animationDelay = Math.random() * 3 + 's';
+            heart.style.opacity = Math.random() * 0.4 + 0.6; // 0.6-1.0 (more visible)
+            heartsHint.appendChild(heart);
+        }
+    }
+
     updateDisabledNumbersUI() {
         // Hide number buttons for disabled numbers
         if (!this.disabledNumbers || this.disabledNumbers.length === 0) {
@@ -402,17 +538,13 @@ class GameScreen {
         freeContainer.innerHTML = '';
         paidContainer.innerHTML = '';
         
-        // Display free category
+        // Display free category label only (no button)
+        // FREE is represented by selecting a number 1-20 using the number buttons
         if (categories.free) {
-            const freeBtn = this.createCategoryButton(categories.free, true);
-            freeContainer.appendChild(freeBtn);
-            
-            // Auto-select free category on load
-            setTimeout(() => {
-                if (!this.selectedCategory) {
-                    freeBtn.click();
-                }
-            }, 100);
+            const freeLabel = document.createElement('div');
+            freeLabel.className = 'category-label';
+            freeLabel.textContent = '💎 FREE - Select a number (1-20)';
+            freeContainer.appendChild(freeLabel);
         }
         
         // Display paid categories with grouping
@@ -496,7 +628,11 @@ class GameScreen {
         
         this.selectedCategory = category;
         
-        // Update UI - highlight selected button
+        // IMPORTANT: Keep FREE number selection intact when selecting GEM category
+        // Both FREE and GEM are selected simultaneously in same round
+        // Don't modify number buttons - they stay enabled for FREE selection
+        
+        // Update UI - highlight selected category button
         document.querySelectorAll('.category-option').forEach(opt => {
             opt.classList.remove('selected');
         });
@@ -512,16 +648,38 @@ class GameScreen {
         document.getElementById('selectedCategory').textContent = category.label;
         document.getElementById('categoryFee').textContent = category.cost;
         
-        // Show success message for paid categories
+        // Show success message
         if (category.cost > 0) {
             this.showCategoryMessage(`Selected ${category.label} - ${category.cost} 💎 will be deducted on submit`, true);
         } else {
-            this.showCategoryMessage(`Selected ${category.label} - Free choice`, true);
+            this.showCategoryMessage(`Selected ${category.label}`, true);
         }
         
         if (this.audioManager) {
             this.audioManager.playSound('click');
         }
+    }
+
+    getCategoryValidNumbers(categoryName) {
+        // Return array of valid numbers for category
+        if (categoryName === '1-10') {
+            return Array.from({length: 10}, (_, i) => i + 1);
+        } else if (categoryName === 'odd') {
+            return [1, 3, 5, 7, 9];
+        } else if (categoryName === 'even') {
+            return [2, 4, 6, 8, 10];
+        } else if (categoryName.includes('-')) {
+            // Range category like '1-5', '6-10'
+            const [low, high] = categoryName.split('-').map(x => parseInt(x));
+            return Array.from({length: high - low + 1}, (_, i) => low + i);
+        }
+        return [];
+    }
+
+    isNumberValidForCategory(number, categoryName) {
+        // Check if a number is valid for a specific category
+        const validNumbers = this.getCategoryValidNumbers(categoryName);
+        return validNumbers.includes(parseInt(number));
     }
 
     showCategoryMessage(message, isSuccess) {
@@ -555,15 +713,42 @@ class GameScreen {
                     for (let i = this.historyRowCount; i < result.history.length; i++) {
                         const round = result.history[i];
                         const row = document.createElement('tr');
-                        const resultText = round.is_correct ? '✓ Correct' : '✗ Wrong';
-                        const resultClass = round.is_correct ? 'result-correct' : 'result-wrong';
+                        
+                        // Determine if FREE or GEM category and format accordingly
+                        let freeContent = '—';
+                        let gemContent = '—';
+                        let freeClass = '';
+                        let gemClass = '';
+                        
+                        // Check if it's a FREE guess (no cost) or GEM guess
+                        if (round.category_cost === 0) {
+                            // FREE category submission
+                            freeContent = round.guessed_number;
+                            if (round.is_correct) {
+                                freeClass = 'result-correct';
+                                freeContent += ' ✓';
+                            } else {
+                                freeClass = 'result-wrong';
+                                freeContent += ' ✗';
+                            }
+                        } else {
+                            // GEM category submission
+                            gemContent = round.selected_category;
+                            if (round.is_correct) {
+                                gemClass = 'result-correct';
+                                gemContent += ' ✓';
+                            } else {
+                                gemClass = 'result-wrong';
+                                gemContent += ' ✗';
+                            }
+                        }
                         
                         row.innerHTML = `
                             <td>${round.round}</td>
                             <td>${round.player}</td>
-                            <td>${round.guessed_number}</td>
+                            <td class="${freeClass}">${freeContent}</td>
+                            <td class="${gemClass}">${gemContent}</td>
                             <td>${round.secret_number}</td>
-                            <td class="${resultClass}">${resultText}</td>
                         `;
                         tbody.appendChild(row);
                     }
@@ -587,6 +772,49 @@ class GameScreen {
             tbody.innerHTML = '';
             this.historyRowCount = 0;
         }
+    }
+
+    async checkAndDisplayHint() {
+        if (!this.isMyTurn || !this.gameStarted) return;
+
+        try {
+            const result = await this.requestManager.getJSON('api/game/hint.php', {
+                room_code: this.roomCode
+            });
+
+            if (result.success && result.hint) {
+                // Show hint popup
+                this.displayHintPopup(result.hint);
+            }
+        } catch (e) {
+            console.error('[Hint] Error fetching hint:', e);
+        }
+    }
+
+    displayHintPopup(hint) {
+        const popup = document.getElementById('hint-popup');
+        const iconEl = document.getElementById('hint-icon');
+        
+        if (!popup || !iconEl) return;
+
+        // Set icon and color based on hint type
+        if (hint.type === 'even') {
+            iconEl.textContent = '🍬';  // Toffee icon for even
+            popup.style.filter = 'drop-shadow(0 0 15px rgba(255, 215, 0, 0.5))';
+        } else {
+            iconEl.textContent = '❤️';  // Heart for odd
+            popup.style.filter = 'drop-shadow(0 0 15px rgba(255, 105, 180, 0.5))';
+        }
+
+        // Show popup
+        popup.classList.remove('hidden');
+        popup.classList.add('show');
+
+        // Hide after 4 seconds
+        setTimeout(() => {
+            popup.classList.remove('show');
+            popup.classList.add('hidden');
+        }, 4000);
     }
 
     showCountdown() {
@@ -745,7 +973,23 @@ class GameScreen {
                 timeRemaining--;
                 this.turnTimer = setTimeout(updateTimer, 1000);
             } else {
-                // Time's up - auto-submit, fill bar to 100%
+                // Time's up - check if user selected something
+                if (!this.selectedNumber && !this.selectedCategory) {
+                    // Nothing selected - skip this turn and advance to next player
+                    timerDisplay.textContent = '0s';
+                    if (timerBar) {
+                        timerBar.style.width = '100%';
+                    }
+                    
+                    // Disable play area
+                    this.enablePlayArea(false);
+                    
+                    // Call skip endpoint to advance turn
+                    this.skipTurn();
+                    return;
+                }
+                
+                // User selected something - auto-submit
                 timerDisplay.textContent = '0s';
                 if (timerBar) {
                     timerBar.style.width = '100%';
@@ -758,15 +1002,30 @@ class GameScreen {
     }
 
     async autoSubmitGuess() {
-        // Submit 0 if no number selected (no random selection)
-        const guessNumber = this.selectedNumber ?? 0;
-        const categoryName = this.selectedCategory?.name || '1-20';
+        // NEW: Support simultaneous FREE and GEM category evaluation
+        // FREE: Optional number selection from 1-20
+        // GEM: Optional category selection (ODD/EVEN/Range)
+        
+        const freeNumber = this.selectedNumber;
+        const gemCategory = this.selectedCategory?.name;
+        
+        // NEW: User MUST select at least one category
+        // No auto-fill with default values
+        if (!freeNumber && !gemCategory) {
+            console.error('[AutoSubmit] User must select FREE number or GEM category');
+            this.showCategoryMessage('Please select a number or gem category', false);
+            return;
+        }
+        
+        let finalFreeNumber = freeNumber;
+        let finalGemCategory = gemCategory;
 
         try {
+            // Submit both FREE and GEM together
             const result = await this.requestManager.postJSON('api/game/guess.php', {
                 room_code: this.roomCode,
-                guess: guessNumber,
-                category: categoryName
+                free_guess: finalFreeNumber || null,
+                gem_category: finalGemCategory || null
             });
 
             if (result.success) {
@@ -774,30 +1033,51 @@ class GameScreen {
                 document.getElementById('guessedNumber').textContent = result.guess.guessed_number;
                 document.getElementById('realNumber').textContent = result.guess.secret_number;
                 
-                let outcomeText = result.guess.is_correct ? '✓ Correct!' : '✗ Wrong number';
-                if (result.guess.category_cost > 0) {
-                    outcomeText += ` (${result.guess.gem_reward > 0 ? '+' : ''}${result.guess.gem_reward - result.guess.category_cost} 💎)`;
+                // Build outcome message showing both category results
+                let outcomeText = '';
+                
+                // Check FREE category result
+                if (result.guess.free_is_correct) {
+                    outcomeText += '✓ FREE Correct! +10 💎\n';
+                } else if (finalFreeNumber) {
+                    outcomeText += '✗ FREE Wrong\n';
                 }
+                
+                // Check GEM category result
+                if (result.guess.gem_is_correct) {
+                    outcomeText += `✓ ${result.guess.gem_category} Correct! +20 💎`;
+                } else if (finalGemCategory) {
+                    outcomeText += `✗ ${result.guess.gem_category} Wrong`;
+                }
+                
                 document.getElementById('outcome').textContent = outcomeText;
                 document.getElementById('result').classList.remove('hidden');
 
-                // Update gems and show notification
-                if (result.guess.category_cost > 0) {
-                    const netGems = result.guess.gem_reward - result.guess.category_cost;
-                    this.showGemNotification(netGems, true);
-                } else if (result.guess.gem_reward > 0) {
-                    this.showGemNotification(result.guess.gem_reward);
-                } else if (result.guess.category_cost > 0) {
-                    this.showGemNotification(-result.guess.category_cost);
+                // Calculate and display total rewards
+                let totalReward = 0;
+                if (result.guess.free_is_correct) totalReward += 10;
+                if (result.guess.gem_is_correct) totalReward -= 10;  // Cost
+                if (result.guess.gem_is_correct) totalReward += 20;
+                
+                // Show gem notification with total reward
+                if (totalReward !== 0) {
+                    this.showGemNotification(totalReward, totalReward < 0);
                 }
 
-                // Update player gems
+                // Update player gems IMMEDIATELY in local state
                 const myId = parseInt(window.currentUser.id);
-                this.playerGems[myId] = result.guess.gems_balance || (this.playerGems[myId] || 0);
+                const newBalance = result.guess.gems_balance || (this.playerGems[myId] || 0);
+                this.playerGems[myId] = newBalance;
                 
-                // Update top bar gems display in real-time
+                // Update top bar gems display in real-time immediately
+                const gemsDisplay = document.getElementById('top-gems-display');
+                if (gemsDisplay) {
+                    gemsDisplay.textContent = `💎 ${newBalance}`;
+                }
+                
+                // Also verify with backend to ensure accuracy
                 if (window.updateTopBarGems) {
-                    window.updateTopBarGems();
+                    setTimeout(() => window.updateTopBarGems(), 500);
                 }
 
                 if (this.audioManager) {
@@ -822,23 +1102,58 @@ class GameScreen {
                 }, 2000);
             }
         } catch (e) {
-            console.error('Failed to auto-submit guess:', e);
+            const errorMsg = e?.error || e?.message || JSON.stringify(e);
+            this.showCategoryMessage(`Auto-submit failed: ${errorMsg}`, false);
+        }
+    }
+
+    async skipTurn() {
+        // Skip this player's turn and advance to next player
+        try {
+            const result = await this.requestManager.postJSON('api/game/skip.php', {
+                room_code: this.roomCode
+            });
+
+            if (result.success) {
+                // Wait 2 seconds then load next player state
+                setTimeout(() => {
+                    this.selectedNumber = null;
+                    this.selectedCategory = null;
+                    document.querySelectorAll('.number-btn').forEach(btn => btn.classList.remove('active'));
+                    document.getElementById('selectedNumber').textContent = '—';
+                    document.getElementById('selectedCategory').textContent = '—';
+                    document.getElementById('categoryFee').textContent = '—';
+                    
+                    // Load game state for next player
+                    this.loadGameState();
+                }, 1000);
+            }
+        } catch (e) {
+            const errorMsg = e?.error || e?.message || JSON.stringify(e);
+            console.error('[Skip] Failed - Error:', errorMsg);
+            this.showCategoryMessage(`Turn skip failed: ${errorMsg}`, false);
         }
     }
 
     selectNumber(num) {
         if (!this.isMyTurn || !this.gameStarted) return;
 
+        const numInt = parseInt(num);
+
         // Check if number is disabled (convert to int for comparison)
         const disabledInts = this.disabledNumbers.map(n => parseInt(n));
-        if (disabledInts.includes(parseInt(num))) {
+        if (disabledInts.includes(numInt)) {
             this.showCategoryMessage(`Number ${num} is disabled in this difficulty level`, false);
             return;
         }
 
-        // Require category selection first
-        if (!this.selectedCategory) {
-            this.showCategoryMessage('Please select a category first', false);
+        // NEW: Allow selecting any number 1-10 (FREE category)
+        // Numbers are INDEPENDENT from GEM category selection
+        // GEM categories (ODD/EVEN/Range) don't constrain number selection
+        
+        // Basic validation: number must be 1-10
+        if (numInt < 1 || numInt > 10) {
+            this.showCategoryMessage('Number must be between 1 and 10', false);
             return;
         }
 
@@ -933,9 +1248,11 @@ class GameScreen {
     }
 
     async endGame() {
-        // Stop polling and timers
+        // Stop ALL polling and timers
         if (this.pollingInterval) clearInterval(this.pollingInterval);
         if (this.gameTimer) clearTimeout(this.gameTimer);
+        if (this.countdownTimer) clearTimeout(this.countdownTimer);
+        if (this.turnTimer) clearTimeout(this.turnTimer);
 
         // Save last game code for history access
         if (this.roomCode) {

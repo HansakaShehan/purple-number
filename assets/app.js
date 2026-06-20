@@ -233,7 +233,6 @@ function updateTopBarGems() {
     const computedStyle = window.getComputedStyle(loginScreen);
     const isLoginScreenVisible = computedStyle.display !== 'none';
     if (isLoginScreenVisible) {
-      console.log('[Gems] Login screen is visible, skipping gems poll');
       return; // Skip polling on login screen
     }
   }
@@ -243,7 +242,6 @@ function updateTopBarGems() {
     .then(res => {
       // Handle 401 (unauthorized/invalid session)
       if (res.status === 401) {
-        console.log('[Gems] Not authenticated (401), showing 0 gems');
         gemsDisplay.textContent = '💎 0';
         gemsDisplay.style.display = 'inline-block';
         return null;
@@ -253,11 +251,9 @@ function updateTopBarGems() {
     .then(data => {
       if (!data) return; // Skip if 401
       if (data.success) {
-        console.log('[Gems] Fetched gems:', data.gems);
         gemsDisplay.textContent = `💎 ${data.gems}`;
         gemsDisplay.style.display = 'inline-block';
       } else {
-        console.log('[Gems] API returned false, showing 0');
         gemsDisplay.textContent = '💎 0';
         gemsDisplay.style.display = 'inline-block';
       }
